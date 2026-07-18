@@ -16,6 +16,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { PasswordInput } from "./password-input"
 import { DemoAccounts } from "./demo-accounts"
 
+import { getSafeRedirect } from "@/features/auth/auth.utils"
+
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -38,19 +40,12 @@ export function LoginForm() {
     try {
       const res = await authApi.login(data)
       
-      const redirectTo = searchParams.get("redirect")
-      if (redirectTo) {
-        router.push(redirectTo)
-        router.refresh()
-        return
-      }
+      const safeRedirect = getSafeRedirect(searchParams.get("redirect"))
+      const roleRedirect = (res.data?.user?.role === "super_admin" || res.data?.user?.role === "hr_manager")
+        ? "/dashboard"
+        : "/profile"
 
-      const role = res.data?.user?.role
-      if (role === "super_admin" || role === "hr_manager") {
-        router.push("/dashboard")
-      } else {
-        router.push("/profile")
-      }
+      router.push(safeRedirect ?? roleRedirect)
       router.refresh()
     } catch (error) {
       if (error instanceof ApiClientError) {

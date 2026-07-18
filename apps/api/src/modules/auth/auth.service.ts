@@ -3,15 +3,16 @@ import { comparePassword } from "../../utils/password";
 import { signAccessToken } from "../../utils/jwt";
 import { ApiError } from "../../utils/api-error";
 import { LoginInput } from "@empnexa/shared";
+import { toAuthenticatedUserDto } from "./auth.mapper";
 
 export class AuthService {
   private repository = new AuthRepository();
 
   async login(input: LoginInput) {
-    // 1. Find employee
-    const employee = await this.repository.findEmployeeByEmail(input.email);
+    // 1. Find employee (without salary)
+    const employee = await this.repository.findEmployeeForLoginByEmail(input.email);
 
-    // 2. Return generic error for not found or invalid password
+    // 2. Return generic error for not found
     if (!employee) {
       throw new ApiError(401, "Invalid email or password");
     }
@@ -30,21 +31,23 @@ export class AuthService {
     // 5. Generate JWT
     const token = signAccessToken({
       sub: employee.id,
-      role: employee.role as any,
+      role: employee.role,
       employeeCode: employee.employeeCode,
     });
 
-    // 6. Return sanitized employee data
-    const { passwordHash, deletedAt, ...sanitizedEmployee } = employee;
+    // 6. Map to DTO (ensures salary and passwordHash are excluded)
+    // We explicitly exclude the passwordHash to cast to the full record type for mapper if needed,
+    // though findEmployeeForLoginByEmail excludes salary, we can safely cast it.
+    const userDto = toAuthenticatedUserDto(employee as any);
 
     return {
       token,
-      user: sanitizedEmployee,
+      user: userDto,
     };
   }
 
   async getCurrentUser(userId: string) {
-    const employee = await this.repository.findEmployeeById(userId);
+    const employee = await this.repository.findFullEmployeeById(userId);
 
     if (!employee) {
       throw new ApiError(401, "User not found");
@@ -54,8 +57,6 @@ export class AuthService {
       throw new ApiError(403, "Account is inactive");
     }
 
-    const { passwordHash, deletedAt, ...sanitizedEmployee } = employee;
-
-    return sanitizedEmployee;
+    return toAuthenticatedUserDto(employee);
   }
 }

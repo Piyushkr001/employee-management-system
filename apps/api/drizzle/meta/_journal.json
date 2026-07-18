@@ -8,6 +8,13 @@
       "when": 1784396624738,
       "tag": "0000_lame_kylun",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784401583288,
+      "tag": "0001_add_employee_checks",
+      "breakpoints": true
     }
   ]
 }
