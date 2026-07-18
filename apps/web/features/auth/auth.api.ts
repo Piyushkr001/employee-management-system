@@ -1,12 +1,30 @@
-import { LoginInput, AuthenticatedUser, ApiResponse } from "@empnexa/shared";
+import { LoginInput, AuthenticatedUserDto, ApiResponse } from "@empnexa/shared";
 
-// Improved fetchApi with typing support
+export class ApiClientError extends Error {
+  status: number;
+  code?: string;
+  fieldErrors?: Record<string, string[]>;
+
+  constructor(
+    message: string,
+    status: number,
+    code?: string,
+    fieldErrors?: Record<string, string[]>,
+  ) {
+    super(message);
+    this.name = "ApiClientError";
+    this.status = status;
+    this.code = code;
+    this.fieldErrors = fieldErrors;
+  }
+}
+
 export async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-  const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+  const url = `${baseUrl.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
 
   const response = await fetch(url, {
     ...options,
@@ -17,20 +35,23 @@ export async function fetchApi<T>(
     credentials: "include",
   });
 
-  // Handle empty responses
+  let data: any = {};
   const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: "Invalid JSON response" };
+    }
+  }
 
   if (!response.ok) {
-    // If it's a known API error format
-    if (data && data.success === false) {
-      throw data; // Throw the ApiResponse object so we can read fieldErrors
-    }
-    // Fallback
-    throw {
-      success: false,
-      message: data.message || "An unexpected error occurred",
-    } as ApiResponse<unknown>;
+    throw new ApiClientError(
+      data.message || "An unexpected error occurred",
+      response.status,
+      data.error?.code,
+      data.error?.fieldErrors
+    );
   }
 
   return data as ApiResponse<T>;
@@ -38,7 +59,7 @@ export async function fetchApi<T>(
 
 export const authApi = {
   login: async (input: LoginInput) => {
-    return fetchApi<{ user: AuthenticatedUser }>("/auth/login", {
+    return fetchApi<{ user: AuthenticatedUserDto }>("/auth/login", {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -51,7 +72,7 @@ export const authApi = {
   },
   
   getCurrentUser: async () => {
-    return fetchApi<{ user: AuthenticatedUser }>("/auth/me", {
+    return fetchApi<{ user: AuthenticatedUserDto }>("/auth/me", {
       method: "GET",
     });
   },

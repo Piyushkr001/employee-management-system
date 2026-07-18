@@ -4,10 +4,10 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Users, Building2, LayoutDashboard, UserCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { AuthenticatedUser } from "@empnexa/shared"
+import { AuthenticatedUserDto } from "@empnexa/shared"
 
 type AppSidebarProps = {
-  user: AuthenticatedUser
+  user: AuthenticatedUserDto
 }
 
 export function AppSidebar({ user }: AppSidebarProps) {

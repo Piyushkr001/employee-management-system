@@ -5,12 +5,12 @@ import db from "../db";
 import { env } from "../config/env";
 import { eq } from "drizzle-orm";
 import { employees } from "../db/schema/employees";
-import { AuthenticatedUser } from "@empnexa/shared";
+import { AuthenticatedUserDto } from "@empnexa/shared";
 
 declare global {
   namespace Express {
     interface Request {
-      user?: AuthenticatedUser;
+      user?: AuthenticatedUserDto;
     }
   }
 }
@@ -50,13 +50,15 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       phone: user.phone,
       department: user.department,
       designation: user.designation,
-      joiningDate: user.joiningDate ? new Date(user.joiningDate) : null,
+      joiningDate: typeof user.joiningDate === "string" 
+        ? user.joiningDate 
+        : (user.joiningDate as Date).toISOString().split("T")[0],
       status: user.status as any,
       role: user.role as any,
       managerId: user.managerId,
       profileImageUrl: user.profileImageUrl,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
     };
 
     next();

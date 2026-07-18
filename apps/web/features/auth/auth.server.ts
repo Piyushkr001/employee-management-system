@@ -1,31 +1,36 @@
 import { cookies } from "next/headers";
-import { AuthenticatedUser, ApiResponse } from "@empnexa/shared";
+import { AuthenticatedUserDto, ApiResponse } from "@empnexa/shared";
 
-export async function getCurrentUserServer(): Promise<AuthenticatedUser | null> {
+export async function getCurrentUserServer(): Promise<AuthenticatedUserDto | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get("empnexa_token")?.value;
+  const cookieName = process.env.AUTH_COOKIE_NAME || "empnexa_token";
+  const token = cookieStore.get(cookieName)?.value;
 
   if (!token) {
     return null;
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  const baseUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
   
   try {
     const res = await fetch(`${baseUrl}/auth/me`, {
       headers: {
-        Cookie: `empnexa_token=${token}`,
+        Cookie: `${cookieName}=${token}`,
       },
       cache: "no-store",
     });
 
     if (!res.ok) {
+      if (res.status >= 500) {
+        console.error(`[getCurrentUserServer] Backend error: ${res.status}`);
+      }
       return null;
     }
 
-    const data: ApiResponse<{ user: AuthenticatedUser }> = await res.json();
+    const data: ApiResponse<{ user: AuthenticatedUserDto }> = await res.json();
     return data.data?.user || null;
   } catch (error) {
+    console.error("[getCurrentUserServer] Fetch failed:", error);
     return null;
   }
 }

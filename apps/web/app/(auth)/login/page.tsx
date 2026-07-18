@@ -1,15 +1,27 @@
 import { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { LoginForm } from "@/components/auth/login-form"
 import { AuthBrandPanel } from "@/components/auth/auth-brand-panel"
+import { getCurrentUserServer } from "@/features/auth/auth.server"
 
 export const metadata: Metadata = {
   title: "Login | EmpNexa",
   description: "Sign in to your EmpNexa workspace.",
 }
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const user = await getCurrentUserServer();
+
+  if (user?.role === "employee") {
+    redirect("/profile");
+  }
+
+  if (user) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background lg:flex-row">
       <AuthBrandPanel />

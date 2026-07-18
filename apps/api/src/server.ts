@@ -1,7 +1,6 @@
 import app from "./app";
 import { env } from "./config/env";
-
-import db from "./db";
+import { client } from "./db";
 
 const startServer = async () => {
   try {
@@ -9,23 +8,31 @@ const startServer = async () => {
       console.log(`🚀 EmpNexa API is running on port ${env.PORT} in ${env.NODE_ENV} mode`);
     });
 
-    server.on("error", (error) => {
-      console.error("❌ Server startup error:", error);
+    server.on("error", (error: NodeJS.ErrnoException) => {
+      if (error.syscall !== "listen") {
+        throw error;
+      }
+      
+      if (error.code === "EADDRINUSE") {
+        console.error(`❌ Port ${env.PORT} is already in use`);
+      } else {
+        console.error("❌ Server startup error:", error);
+      }
       process.exit(1);
     });
 
-    const gracefulShutdown = async () => {
-      console.log("Shutting down gracefully...");
-      server.close(() => {
+    const gracefulShutdown = async (signal: string) => {
+      console.log(`\n${signal} received. Shutting down gracefully...`);
+      server.close(async () => {
         console.log("HTTP server closed.");
+        await client.end();
+        console.log("Database connection closed.");
+        process.exit(0);
       });
-      // End DB connection if necessary; drizzle doesn't natively have a clean 'close' for postgres.js client
-      // but if we exported the `client` we could close it. We'll leave it simple for now or import client.
-      process.exit(0);
     };
 
-    process.on("SIGINT", gracefulShutdown);
-    process.on("SIGTERM", gracefulShutdown);
+    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
     
   } catch (error) {
     console.error("❌ Failed to start server:", error);

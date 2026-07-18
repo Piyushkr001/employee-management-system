@@ -1,11 +1,11 @@
 import { AppSidebar } from "./app-sidebar"
 import { DashboardHeader } from "./dashboard-header"
-import { AuthenticatedUser } from "@empnexa/shared"
+import { AuthenticatedUserDto } from "@empnexa/shared"
 import Image from "next/image"
 import Link from "next/link"
 
 interface DashboardShellProps {
-  user: AuthenticatedUser
+  user: AuthenticatedUserDto
   children: React.ReactNode
 }
 

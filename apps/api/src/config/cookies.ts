@@ -1,10 +1,9 @@
 import { CookieOptions } from "express";
 import { env } from "./env";
 
-const maxAge = 1000 * 60 * 60 * 8; // 8 hours
-
-export const getCookieOptions = (): CookieOptions => {
+export const getAuthCookieOptions = (): CookieOptions => {
   const isProduction = env.NODE_ENV === "production";
+  const maxAge = parseInt(env.JWT_EXPIRES_IN_SECONDS as unknown as string, 10) * 1000;
 
   return {
     httpOnly: true,
@@ -12,5 +11,16 @@ export const getCookieOptions = (): CookieOptions => {
     sameSite: isProduction ? "none" : "lax",
     path: "/",
     maxAge,
+  };
+};
+
+export const getClearAuthCookieOptions = (): CookieOptions => {
+  const isProduction = env.NODE_ENV === "production";
+
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
   };
 };

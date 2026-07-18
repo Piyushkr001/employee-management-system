@@ -8,7 +8,7 @@ import { authenticate } from "../../middleware/authenticate";
 const router = Router();
 const controller = new AuthController();
 
-router.post("/login", validate(loginSchema), asyncHandler(controller.login));
+router.post("/login", validate(loginSchema, "body"), asyncHandler(controller.login));
 router.post("/logout", asyncHandler(controller.logout));
 router.get("/me", asyncHandler(authenticate), asyncHandler(controller.getCurrentUser));
 

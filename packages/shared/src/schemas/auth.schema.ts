@@ -12,9 +12,10 @@ export const loginSchema = z.object({
     .min(8, "Password must contain at least 8 characters"),
 });
 
-export type LoginInput = z.infer<typeof loginSchema>;
+export type LoginFormInput = z.input<typeof loginSchema>;
+export type LoginInput = z.output<typeof loginSchema>;
 
-export type AuthenticatedUser = {
+export type AuthenticatedUserDto = {
   id: string;
   employeeCode: string;
   name: string;
@@ -22,13 +23,13 @@ export type AuthenticatedUser = {
   phone: string;
   department: string;
   designation: string;
-  joiningDate: Date | null;
+  joiningDate: string;
   status: "active" | "inactive";
   role: UserRole;
   managerId: string | null;
   profileImageUrl: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ApiResponse<T = undefined> = {

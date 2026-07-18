@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
 import { sendResponse } from "../../utils/response";
-import { getCookieOptions } from "../../config/cookies";
+import { getAuthCookieOptions, getClearAuthCookieOptions } from "../../config/cookies";
 import { env } from "../../config/env";
 
 export class AuthController {
@@ -10,13 +10,13 @@ export class AuthController {
   login = async (req: Request, res: Response) => {
     const { token, user } = await this.service.login(req.body);
 
-    res.cookie(env.COOKIE_NAME, token, getCookieOptions());
+    res.cookie(env.COOKIE_NAME, token, getAuthCookieOptions());
 
     sendResponse(res, 200, "Login successful", { user });
   };
 
   logout = async (req: Request, res: Response) => {
-    res.clearCookie(env.COOKIE_NAME, getCookieOptions());
+    res.clearCookie(env.COOKIE_NAME, getClearAuthCookieOptions());
     sendResponse(res, 200, "Logout successful");
   };
 

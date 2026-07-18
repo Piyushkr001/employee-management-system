@@ -4,10 +4,10 @@ import { Menu } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { AppSidebar } from "./app-sidebar"
-import { AuthenticatedUser } from "@empnexa/shared"
+import { AuthenticatedUserDto } from "@empnexa/shared"
 import Image from "next/image"
 
-export function MobileSidebar({ user }: { user: AuthenticatedUser }) {
+export function MobileSidebar({ user }: { user: AuthenticatedUserDto }) {
   return (
     <Sheet>
       <SheetTrigger render={<Button variant="outline" size="icon" className="shrink-0 md:hidden" />}>

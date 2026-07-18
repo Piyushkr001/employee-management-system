@@ -13,10 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { AuthenticatedUser } from "@empnexa/shared"
+import { AuthenticatedUserDto } from "@empnexa/shared"
 import { authApi } from "@/features/auth/auth.api"
 
-export function UserMenu({ user }: { user: AuthenticatedUser }) {
+export function UserMenu({ user }: { user: AuthenticatedUserDto }) {
   const router = useRouter()
 
   const handleLogout = async () => {

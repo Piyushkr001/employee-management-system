@@ -1,31 +1,32 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
+
+import { loginSchema, LoginFormInput } from "@empnexa/shared"
+import { authApi, ApiClientError } from "@/features/auth/auth.api"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { PasswordInput } from "./password-input"
 import { DemoAccounts } from "./demo-accounts"
-import { authApi } from "@/features/auth/auth.api"
-import { LoginInput, loginSchema } from "@empnexa/shared"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function LoginForm() {
   const router = useRouter()
-  const [error, setError] = React.useState<string | null>(null)
-  
+  const searchParams = useSearchParams()
+
   const {
     register,
     handleSubmit,
     setValue,
+    setError,
     formState: { errors, isSubmitting },
-  } = useForm<LoginInput>({
-    // @ts-expect-error - ZodResolver type compatibility issue
+  } = useForm<LoginFormInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
@@ -33,24 +34,35 @@ export function LoginForm() {
     },
   })
 
-  async function onSubmit(data: LoginInput) {
-    setError(null)
+  async function onSubmit(data: LoginFormInput) {
     try {
       const res = await authApi.login(data)
-      const role = res.data?.user?.role
       
-      // Role based redirect
+      const redirectTo = searchParams.get("redirect")
+      if (redirectTo) {
+        router.push(redirectTo)
+        router.refresh()
+        return
+      }
+
+      const role = res.data?.user?.role
       if (role === "super_admin" || role === "hr_manager") {
         router.push("/dashboard")
       } else {
         router.push("/profile")
       }
       router.refresh()
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'message' in err) {
-        setError((err as { message: string }).message)
+    } catch (error) {
+      if (error instanceof ApiClientError) {
+        if (error.fieldErrors) {
+          Object.entries(error.fieldErrors).forEach(([field, messages]) => {
+            setError(field as any, { message: messages[0] })
+          })
+        } else {
+          setError("root", { message: error.message })
+        }
       } else {
-        setError("Invalid email or password")
+        setError("root", { message: "An unexpected error occurred. Please try again." })
       }
     }
   }
@@ -65,9 +77,9 @@ export function LoginForm() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {error && (
+        {errors.root && (
           <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{errors.root.message}</AlertDescription>
           </Alert>
         )}
 

@@ -3,9 +3,9 @@
 import { ModeToggle } from "@/app/_shared/ModeToggle"
 import { MobileSidebar } from "./mobile-sidebar"
 import { UserMenu } from "./user-menu"
-import { AuthenticatedUser } from "@empnexa/shared"
+import { AuthenticatedUserDto } from "@empnexa/shared"
 
-export function DashboardHeader({ user }: { user: AuthenticatedUser }) {
+export function DashboardHeader({ user }: { user: AuthenticatedUserDto }) {
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
       <MobileSidebar user={user} />

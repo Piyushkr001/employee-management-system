@@ -1,5 +1,5 @@
 {
-  "id": "9158b000-4fcf-437f-991f-1f1c529fa851",
+  "id": "06a62377-a771-4e44-88ba-a8a992406da3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -17,7 +17,7 @@
         },
         "employee_code": {
           "name": "employee_code",
-          "type": "varchar(50)",
+          "type": "varchar(30)",
           "primaryKey": false,
           "notNull": true
         },
@@ -35,7 +35,7 @@
         },
         "password_hash": {
           "name": "password_hash",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -57,22 +57,21 @@
           "primaryKey": false,
           "notNull": true
         },
-        "salary": {
-          "name": "salary",
+        "salary_in_paise": {
+          "name": "salary_in_paise",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "default": 0
+          "notNull": true
         },
         "joining_date": {
           "name": "joining_date",
           "type": "date",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "status",
+          "type": "employee_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
@@ -80,7 +79,7 @@
         },
         "role": {
           "name": "role",
-          "type": "role",
+          "type": "employee_role",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
@@ -94,49 +93,34 @@
         },
         "profile_image_url": {
           "name": "profile_image_url",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
         "deleted_at": {
           "name": "deleted_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         }
       },
       "indexes": {
-        "email_idx": {
-          "name": "email_idx",
-          "columns": [
-            {
-              "expression": "email",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "employee_code_idx": {
-          "name": "employee_code_idx",
+        "employees_employee_code_unique": {
+          "name": "employees_employee_code_unique",
           "columns": [
             {
               "expression": "employee_code",
@@ -150,8 +134,23 @@
           "method": "btree",
           "with": {}
         },
-        "manager_id_idx": {
-          "name": "manager_id_idx",
+        "employees_email_unique": {
+          "name": "employees_email_unique",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "employees_manager_id_idx": {
+          "name": "employees_manager_id_idx",
           "columns": [
             {
               "expression": "manager_id",
@@ -165,8 +164,8 @@
           "method": "btree",
           "with": {}
         },
-        "department_idx": {
-          "name": "department_idx",
+        "employees_department_idx": {
+          "name": "employees_department_idx",
           "columns": [
             {
               "expression": "department",
@@ -180,8 +179,8 @@
           "method": "btree",
           "with": {}
         },
-        "role_idx": {
-          "name": "role_idx",
+        "employees_role_idx": {
+          "name": "employees_role_idx",
           "columns": [
             {
               "expression": "role",
@@ -195,8 +194,8 @@
           "method": "btree",
           "with": {}
         },
-        "status_idx": {
-          "name": "status_idx",
+        "employees_status_idx": {
+          "name": "employees_status_idx",
           "columns": [
             {
               "expression": "status",
@@ -210,8 +209,8 @@
           "method": "btree",
           "with": {}
         },
-        "joining_date_idx": {
-          "name": "joining_date_idx",
+        "employees_joining_date_idx": {
+          "name": "employees_joining_date_idx",
           "columns": [
             {
               "expression": "joining_date",
@@ -225,8 +224,8 @@
           "method": "btree",
           "with": {}
         },
-        "deleted_at_idx": {
-          "name": "deleted_at_idx",
+        "employees_deleted_at_idx": {
+          "name": "employees_deleted_at_idx",
           "columns": [
             {
               "expression": "deleted_at",
@@ -257,27 +256,12 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "employees_employee_code_unique": {
-          "name": "employees_employee_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "employee_code"
-          ]
-        },
-        "employees_email_unique": {
-          "name": "employees_email_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
-        }
-      }
+      "uniqueConstraints": {}
     }
   },
   "enums": {
-    "public.role": {
-      "name": "role",
+    "public.employee_role": {
+      "name": "employee_role",
       "schema": "public",
       "values": [
         "super_admin",
@@ -285,8 +269,8 @@
         "employee"
       ]
     },
-    "public.status": {
-      "name": "status",
+    "public.employee_status": {
+      "name": "employee_status",
       "schema": "public",
       "values": [
         "active",

@@ -11,7 +11,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url("Invalid database URL format"),
   CLIENT_URL: z.string().url("Invalid client URL format"),
   JWT_SECRET: z.string().min(32, "JWT secret must be at least 32 characters"),
-  JWT_EXPIRES_IN: z.string().default("8h"),
+  JWT_EXPIRES_IN_SECONDS: z.string().default("28800"),
   COOKIE_NAME: z.string().default("empnexa_token"),
 });
 

@@ -10,10 +10,15 @@ export type JwtPayload = {
 
 export function signAccessToken(payload: JwtPayload): string {
   return jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRES_IN as any,
+    expiresIn: parseInt(env.JWT_EXPIRES_IN_SECONDS as unknown as string, 10),
+    issuer: "empnexa-api",
+    audience: "empnexa-web",
   });
 }
 
 export function verifyAccessToken(token: string): JwtPayload {
-  return jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+  return jwt.verify(token, env.JWT_SECRET, {
+    issuer: "empnexa-api",
+    audience: "empnexa-web",
+  }) as JwtPayload;
 }
