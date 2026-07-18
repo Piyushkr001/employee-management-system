@@ -1,17 +1,21 @@
-export default function DashboardLayout({
+import { redirect } from "next/navigation";
+import { getCurrentUserServer } from "@/features/auth/auth.server";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
+
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getCurrentUserServer();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-64 border-r bg-muted/20 p-4">
-        {/* Placeholder for dashboard sidebar */}
-        <h2 className="text-lg font-bold">Dashboard</h2>
-      </aside>
-      <main className="flex-1 p-8">
-        {children}
-      </main>
-    </div>
+    <DashboardShell user={user}>
+      {children}
+    </DashboardShell>
   );
 }
