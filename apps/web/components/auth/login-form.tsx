@@ -25,7 +25,7 @@ export function LoginForm() {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({
-    //@ts-ignore
+    // @ts-expect-error - ZodResolver type compatibility issue
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
