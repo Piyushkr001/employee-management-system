@@ -33,23 +33,23 @@ const navigationLinks = [
     },
     {
         label: "Features",
-        href: "#features",
+        href: "/#features",
         icon: LayoutDashboard,
     },
     {
         label: "Roles",
-        href: "#roles",
+        href: "/#roles",
         icon: ShieldCheck,
     },
     {
         label: "Hierarchy",
-        href: "#hierarchy",
+        href: "/#hierarchy",
         icon: Network,
     },
     {
-        label: "About",
-        href: "#about",
-        icon: Users,
+        label: "Security",
+        href: "/#security",
+        icon: ShieldCheck,
     },
 ] as const;
 
@@ -166,8 +166,24 @@ export function Navbar() {
                                 <SheetTitle className="sr-only">
                                     EmpNexa navigation menu
                                 </SheetTitle>
-
-
+                                <Link href="/" onClick={closeMobileMenu}>
+                                    <Image
+                                        src="/Images/Logo/logo_light.svg"
+                                        alt="EmpNexa Logo"
+                                        width={150}
+                                        height={36}
+                                        priority
+                                        className="block h-8 w-auto dark:hidden"
+                                    />
+                                    <Image
+                                        src="/Images/Logo/logo_dark.svg"
+                                        alt="EmpNexa Logo"
+                                        width={150}
+                                        height={36}
+                                        priority
+                                        className="hidden h-8 w-auto dark:block"
+                                    />
+                                </Link>
                             </SheetHeader>
 
                             <div className="flex flex-1 flex-col overflow-y-auto px-4 py-6">

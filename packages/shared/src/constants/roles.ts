@@ -1,0 +1,48 @@
+export const USER_ROLES = {
+  SUPER_ADMIN: "super_admin",
+  HR_MANAGER: "hr_manager",
+  EMPLOYEE: "employee",
+} as const;
+
+export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
+
+export const PERMISSIONS = {
+  VIEW_ALL_EMPLOYEES: "view:all_employees",
+  CREATE_EMPLOYEE: "create:employee",
+  EDIT_EMPLOYEE: "edit:employee",
+  DELETE_EMPLOYEE: "delete:employee",
+  ASSIGN_MANAGER: "assign:manager",
+  ASSIGN_ROLE: "assign:role",
+  VIEW_ORG_TREE: "view:org_tree",
+  VIEW_DASHBOARD: "view:dashboard",
+  EDIT_OWN_PROFILE: "edit:own_profile",
+} as const;
+
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  [USER_ROLES.SUPER_ADMIN]: [
+    PERMISSIONS.VIEW_ALL_EMPLOYEES,
+    PERMISSIONS.CREATE_EMPLOYEE,
+    PERMISSIONS.EDIT_EMPLOYEE,
+    PERMISSIONS.DELETE_EMPLOYEE,
+    PERMISSIONS.ASSIGN_MANAGER,
+    PERMISSIONS.ASSIGN_ROLE,
+    PERMISSIONS.VIEW_ORG_TREE,
+    PERMISSIONS.VIEW_DASHBOARD,
+    PERMISSIONS.EDIT_OWN_PROFILE,
+  ],
+  [USER_ROLES.HR_MANAGER]: [
+    PERMISSIONS.VIEW_ALL_EMPLOYEES,
+    PERMISSIONS.CREATE_EMPLOYEE,
+    PERMISSIONS.EDIT_EMPLOYEE,
+    PERMISSIONS.ASSIGN_MANAGER,
+    PERMISSIONS.VIEW_ORG_TREE,
+    PERMISSIONS.VIEW_DASHBOARD,
+    PERMISSIONS.EDIT_OWN_PROFILE,
+  ],
+  [USER_ROLES.EMPLOYEE]: [
+    PERMISSIONS.VIEW_ORG_TREE,
+    PERMISSIONS.EDIT_OWN_PROFILE,
+  ],
+};

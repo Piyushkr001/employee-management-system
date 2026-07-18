@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { Exo_2 } from "next/font/google";
 import "./globals.css";
-import { Footer } from "./_shared/Footer";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Navbar } from "./_shared/Navbar";
-
 
 const exo = Exo_2({
   subsets: ["latin"],
@@ -33,9 +30,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Navbar />
           {children}
-          <Footer />
         </ThemeProvider>
       </body>
     </html>
