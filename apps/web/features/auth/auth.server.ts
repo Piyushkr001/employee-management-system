@@ -2,11 +2,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AuthenticatedUserDto, ApiResponse } from "@empnexa/shared";
 import { cache } from "react";
+import { AUTH_COOKIE_NAME } from "@/lib/auth-config";
 
 export async function getCurrentUserServer(): Promise<AuthenticatedUserDto | null> {
   const cookieStore = await cookies();
-  const cookieName = process.env.AUTH_COOKIE_NAME || "empnexa_token";
-  const token = cookieStore.get(cookieName)?.value;
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
   if (!token) {
     return null;
@@ -14,39 +14,34 @@ export async function getCurrentUserServer(): Promise<AuthenticatedUserDto | nul
 
   const baseUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
   
+  let res: Response;
   try {
-    const res = await fetch(`${baseUrl}/auth/me`, {
+    res = await fetch(`${baseUrl}/auth/me`, {
       headers: {
-        Cookie: `${cookieName}=${token}`,
+        Cookie: `${AUTH_COOKIE_NAME}=${token}`,
       },
       cache: "no-store",
     });
-
-    if (!res.ok) {
-      if (res.status === 401) {
-        return null;
-      }
-      if (res.status === 403) {
-        redirect("/unauthorized");
-      }
-      if (res.status >= 500) {
-        throw new Error("Backend service is unavailable");
-      }
-      return null;
-    }
-
-    const data: ApiResponse<{ user: AuthenticatedUserDto }> = await res.json();
-    return data.data?.user || null;
-  } catch (error) {
-    // If it's a backend unavailable error, we throw it to trigger the Error boundary
-    // rather than redirecting to login.
-    if (error instanceof Error && error.message === "Backend service is unavailable") {
-      throw error;
-    }
-    
-    // For fetch failures (network error connecting to internal service)
+  } catch {
     throw new Error("Backend service is unreachable");
   }
+
+  if (res.status === 401) {
+    return null;
+  }
+  if (res.status === 403) {
+    redirect("/unauthorized");
+  }
+  if (res.status >= 500) {
+    throw new Error("Backend service is unavailable");
+  }
+
+  if (!res.ok) {
+    return null;
+  }
+
+  const data: ApiResponse<{ user: AuthenticatedUserDto }> = await res.json();
+  return data.data?.user || null;
 }
 
 export const getCurrentUserCached = cache(getCurrentUserServer);

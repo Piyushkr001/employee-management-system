@@ -40,10 +40,13 @@ export const employeeApi = {
     });
   },
 
-  getManagerOptions: async (excludeEmployeeId?: string) => {
+  getManagerOptions: async (excludeEmployeeId?: string, search?: string) => {
     const searchParams = new URLSearchParams();
     if (excludeEmployeeId) {
       searchParams.append("excludeEmployeeId", excludeEmployeeId);
+    }
+    if (search) {
+      searchParams.append("search", search);
     }
     return fetchApi<{ managers: Pick<EmployeeDto, "id" | "employeeCode" | "name" | "designation" | "department" | "status">[] }>(
       `/employees/manager-options?${searchParams.toString()}`,

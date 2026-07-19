@@ -1,6 +1,6 @@
 import { getCurrentUserCached } from "@/features/auth/auth.server";
 import { getEmployeeByIdServer } from "@/features/employees/employee.server";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ProfileForm } from "@/components/employees/profile-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmployeeRoleBadge } from "@/components/employees/employee-role-badge";
@@ -11,14 +11,15 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  // Fetch latest data to ensure we have phone and profile image url
   let employeeData: any = null;
   try {
     const res = await getEmployeeByIdServer(user.id);
     employeeData = res.data;
-  } catch (error) {
-    // Graceful fallback to user context if API fails
-    employeeData = user as any;
+  } catch (error: any) {
+    if (error.payload?.error?.code === "EMPLOYEE_NOT_FOUND") {
+      notFound();
+    }
+    throw error;
   }
 
   return (

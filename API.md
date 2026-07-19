@@ -25,7 +25,13 @@ type ApiResponse<T = undefined> = {
 
 ### Employees
 - `GET /api/employees`: List employees with pagination, search, and filtering. (Protected)
+- `GET /api/employees/manager-options`: Fetch active employees eligible to be managers, avoiding circular reporting cycles. (Protected)
 - `POST /api/employees`: Create a new employee. (Requires `super_admin` or `hr_manager`)
 - `GET /api/employees/:id`: Get employee details by ID. (Protected)
 - `PUT /api/employees/:id`: Update employee details. (Protected, role-dependent restrictions)
 - `DELETE /api/employees/:id`: Soft delete an employee. (Requires `super_admin`)
+
+## Security
+
+- Authentication uses HTTP-only cookies.
+- Cookie name is shared between frontend and backend via `AUTH_COOKIE_NAME` environment variable (defaults to `empnexa_token`).

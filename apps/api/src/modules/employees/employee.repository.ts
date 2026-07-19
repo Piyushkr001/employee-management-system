@@ -136,8 +136,26 @@ export class EmployeeRepository {
       default: orderByClause = orderFn(employees.createdAt); break;
     }
 
+    const employeeListSelection = {
+      id: employees.id,
+      employeeCode: employees.employeeCode,
+      name: employees.name,
+      email: employees.email,
+      phone: employees.phone,
+      department: employees.department,
+      designation: employees.designation,
+      salaryInPaise: employees.salaryInPaise,
+      joiningDate: employees.joiningDate,
+      status: employees.status,
+      role: employees.role,
+      managerId: employees.managerId,
+      profileImageUrl: employees.profileImageUrl,
+      createdAt: employees.createdAt,
+      updatedAt: employees.updatedAt,
+    };
+
     const [data, totalCountResult] = await Promise.all([
-      db.select().from(employees).where(whereClause).orderBy(orderByClause).limit(limit).offset(offset),
+      db.select(employeeListSelection).from(employees).where(whereClause).orderBy(orderByClause).limit(limit).offset(offset),
       db.select({ count: count() }).from(employees).where(whereClause)
     ]);
 
@@ -195,39 +213,8 @@ export class EmployeeRepository {
 
   async updateWithSuperAdminCheck(id: string, data: Partial<NewEmployee>) {
     return await db.transaction(async (tx) => {
-      // If we are changing role or status, we must ensure we don't remove the last active super admin
-      if ((data.role && data.role !== "super_admin") || (data.status && data.status !== "active")) {
-        const activeSuperAdmins = await tx
-          .select({ count: count() })
-          .from(employees)
-          .where(
-            and(
-              eq(employees.role, "super_admin"),
-              eq(employees.status, "active"),
-              isNull(employees.deletedAt)
-            )
-          )
-          .for("update"); // Lock rows to prevent race conditions
-
-        if (activeSuperAdmins[0].count <= 1) {
-          throw new Error("LAST_ACTIVE_SUPER_ADMIN");
-        }
-      }
-
-      const [employee] = await tx
-        .update(employees)
-        .set({ ...data, updatedAt: new Date() })
-        .where(eq(employees.id, id))
-        .returning();
-      
-      return employee;
-    });
-  }
-
-  async softDeleteWithSuperAdminCheck(id: string) {
-    return await db.transaction(async (tx) => {
       const activeSuperAdmins = await tx
-        .select({ count: count() })
+        .select({ id: employees.id })
         .from(employees)
         .where(
           and(
@@ -236,22 +223,53 @@ export class EmployeeRepository {
             isNull(employees.deletedAt)
           )
         )
-        .for("update"); // Lock rows
+        .for("update");
 
-      if (activeSuperAdmins[0].count <= 1) {
-        throw new Error("LAST_ACTIVE_SUPER_ADMIN");
+      if (activeSuperAdmins.length <= 1) {
+        const isOnlyAdmin = activeSuperAdmins[0]?.id === id;
+        if (isOnlyAdmin) {
+          throw new Error("LAST_ACTIVE_SUPER_ADMIN");
+        }
       }
 
-      const [employee] = await tx
+      const [updatedEmployee] = await tx
         .update(employees)
-        .set({
-          deletedAt: new Date(),
-          updatedAt: new Date(),
-        })
+        .set({ ...data, updatedAt: new Date() })
         .where(eq(employees.id, id))
         .returning();
-      
-      return employee;
+
+      return updatedEmployee;
+    });
+  }
+
+  async softDeleteWithSuperAdminCheck(id: string) {
+    return await db.transaction(async (tx) => {
+      const activeSuperAdmins = await tx
+        .select({ id: employees.id })
+        .from(employees)
+        .where(
+          and(
+            eq(employees.role, "super_admin"),
+            eq(employees.status, "active"),
+            isNull(employees.deletedAt)
+          )
+        )
+        .for("update");
+
+      if (activeSuperAdmins.length <= 1) {
+        const isOnlyAdmin = activeSuperAdmins[0]?.id === id;
+        if (isOnlyAdmin) {
+          throw new Error("LAST_ACTIVE_SUPER_ADMIN");
+        }
+      }
+
+      const [deletedEmployee] = await tx
+        .update(employees)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(eq(employees.id, id))
+        .returning();
+
+      return deletedEmployee;
     });
   }
 }

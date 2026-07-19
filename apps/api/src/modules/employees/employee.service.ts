@@ -116,7 +116,15 @@ export class EmployeeService {
       }
 
       let updatedEmployee;
-      if (employee.role === "super_admin" && ((input.role && input.role !== "super_admin") || (input.status && input.status !== "active"))) {
+      
+      const removesActiveSuperAdmin =
+        employee.role === "super_admin" &&
+        employee.status === "active" &&
+        employee.deletedAt === null &&
+        ((input.role !== undefined && input.role !== "super_admin") ||
+         (input.status !== undefined && input.status !== "active"));
+
+      if (removesActiveSuperAdmin) {
         try {
           updatedEmployee = await this.repository.updateWithSuperAdminCheck(id, updateData);
         } catch (e: any) {
@@ -151,7 +159,12 @@ export class EmployeeService {
       throw new ApiError(409, "Cannot delete employee because they have reportees. Reassign them first.", "EMPLOYEE_HAS_REPORTEES");
     }
 
-    if (employee.role === "super_admin" && employee.status === "active") {
+    const removesActiveSuperAdmin = 
+      employee.role === "super_admin" && 
+      employee.status === "active" && 
+      employee.deletedAt === null;
+
+    if (removesActiveSuperAdmin) {
       try {
         await this.repository.softDeleteWithSuperAdminCheck(id);
       } catch (e: any) {

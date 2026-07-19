@@ -1,4 +1,5 @@
 import { AuthenticatedUserDto, CreateEmployeeInput, UpdateEmployeeInput, UserRole } from "@empnexa/shared";
+import { ApiError } from "../../utils/api-error";
 
 type Actor = {
   id: string;
@@ -47,30 +48,34 @@ export function canUpdateEmployee(actor: Actor, target: TargetEmployee): boolean
   return actor.id === target.id;
 }
 
-export function filterAllowedUpdateFields(actor: Actor, target: TargetEmployee, input: UpdateEmployeeInput): UpdateEmployeeInput {
+export function assertAllowedUpdateFields(actor: Actor, target: TargetEmployee, input: UpdateEmployeeInput): void {
   if (actor.role === "super_admin") {
-    return input;
+    return;
   }
 
   if (actor.role === "hr_manager") {
-    const allowed = { ...input };
-    // HR cannot change role to super_admin
-    if (allowed.role === "super_admin") {
-      delete allowed.role;
+    if (input.role === "super_admin") {
+      throw new ApiError(403, "HR Managers cannot assign the Super Admin role", "FORBIDDEN_ROLE_ASSIGNMENT");
     }
-    return allowed;
+    return;
   }
 
   // Employee self-update
   if (actor.id === target.id) {
-    // Only phone and profileImageUrl are allowed
-    const allowed: UpdateEmployeeInput = {};
-    if (input.phone !== undefined) allowed.phone = input.phone;
-    if (input.profileImageUrl !== undefined) allowed.profileImageUrl = input.profileImageUrl;
-    return allowed;
-  }
+    const forbiddenFields = Object.keys(input).filter(
+      key => key !== "phone" && key !== "profileImageUrl"
+    );
 
-  return {};
+    if (forbiddenFields.length > 0) {
+      throw new ApiError(403, `You cannot update ${forbiddenFields.join(", ")}`, "FORBIDDEN_FIELD");
+    }
+    return;
+  }
+}
+
+export function filterAllowedUpdateFields(actor: Actor, target: TargetEmployee, input: UpdateEmployeeInput): UpdateEmployeeInput {
+  assertAllowedUpdateFields(actor, target, input);
+  return input;
 }
 
 export function canDeleteEmployee(actor: Actor, target: TargetEmployee): boolean {

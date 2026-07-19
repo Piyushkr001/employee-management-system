@@ -19,7 +19,7 @@ export function EmployeeSearch() {
         params.delete("search");
       }
       params.set("page", "1"); // reset page on search
-      router.push(`?${params.toString()}`);
+      router.replace(`?${params.toString()}`);
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timeout);

@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { AUTH_COOKIE_NAME } from "@/lib/auth-config";
 
 const protectedRoutes = [
   "/dashboard",
@@ -9,7 +10,7 @@ const protectedRoutes = [
 ];
 
 export function proxy(request: NextRequest) {
-  const token = request.cookies.get("empnexa_token")?.value;
+  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   const pathname = request.nextUrl.pathname;
 
   const isProtectedRoute = protectedRoutes.some(

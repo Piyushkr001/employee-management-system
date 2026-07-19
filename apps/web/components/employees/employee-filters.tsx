@@ -2,9 +2,14 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
-import { EMPLOYEE_STATUSES } from "@empnexa/shared";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { X, SlidersHorizontal } from "lucide-react";
+import { EMPLOYEE_STATUSES, EMPLOYEE_SORT_FIELDS, SORT_ORDERS } from "@empnexa/shared";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ManagerSelect } from "./manager-select";
+import { useState, useEffect } from "react";
 
 export function EmployeeFilters() {
   const router = useRouter();
@@ -12,25 +17,136 @@ export function EmployeeFilters() {
 
   const handleFilterChange = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value && value !== "all") {
+    if (value && value !== "all" && value !== "none") {
       params.set(key, value);
     } else {
       params.delete(key);
     }
     params.set("page", "1");
-    router.push(`?${params.toString()}`);
+    router.replace(`?${params.toString()}`);
   };
 
   const clearFilters = () => {
-    router.push("?");
+    router.replace("?");
   };
 
   const hasFilters = Array.from(searchParams.keys()).some(
-    key => ["department", "status", "role", "search"].includes(key)
+    key => ["department", "designation", "status", "role", "search", "managerId", "sortBy", "sortOrder", "limit"].includes(key)
   );
+
+  const [department, setDepartment] = useState(searchParams.get("department") || "");
+  const [designation, setDesignation] = useState(searchParams.get("designation") || "");
+
+  useEffect(() => {
+    setDepartment(searchParams.get("department") || "");
+    setDesignation(searchParams.get("designation") || "");
+  }, [searchParams]);
+
+  const applyTextFilters = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (department) params.set("department", department);
+    else params.delete("department");
+    
+    if (designation) params.set("designation", designation);
+    else params.delete("designation");
+
+    params.set("page", "1");
+    router.replace(`?${params.toString()}`);
+  };
 
   return (
     <div className="flex items-center gap-2">
+      <Popover>
+        <PopoverTrigger className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-10 border-dashed")}>
+          <SlidersHorizontal className="mr-2 h-4 w-4" />
+          Advanced Filters
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-4" align="end">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Department</label>
+              <Input 
+                placeholder="e.g. Engineering" 
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                onBlur={applyTextFilters}
+                onKeyDown={(e) => e.key === 'Enter' && applyTextFilters()}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Designation</label>
+              <Input 
+                placeholder="e.g. Developer" 
+                value={designation}
+                onChange={(e) => setDesignation(e.target.value)}
+                onBlur={applyTextFilters}
+                onKeyDown={(e) => e.key === 'Enter' && applyTextFilters()}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Manager</label>
+              <ManagerSelect 
+                value={searchParams.get("managerId") || ""}
+                onChange={(val) => handleFilterChange("managerId", val)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Sort By</label>
+              <Select
+                value={searchParams.get("sortBy") || "createdAt"}
+                onValueChange={(val: string | null) => handleFilterChange("sortBy", val || "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EMPLOYEE_SORT_FIELDS.map(field => (
+                    <SelectItem key={field} value={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Sort Order</label>
+              <Select
+                value={searchParams.get("sortOrder") || "desc"}
+                onValueChange={(val: string | null) => handleFilterChange("sortOrder", val || "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort Order" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">Ascending</SelectItem>
+                  <SelectItem value="desc">Descending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Page Size</label>
+              <Select
+                value={searchParams.get("limit") || "10"}
+                onValueChange={(val: string | null) => handleFilterChange("limit", val || "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Limit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 per page</SelectItem>
+                  <SelectItem value="20">20 per page</SelectItem>
+                  <SelectItem value="50">50 per page</SelectItem>
+                  <SelectItem value="100">100 per page</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+
       <Select
         value={searchParams.get("status") || "all"}
         onValueChange={(val) => handleFilterChange("status", val || "all")}

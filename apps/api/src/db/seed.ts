@@ -10,73 +10,85 @@ async function seed() {
     const hrPassword = await hashPassword("HrManager@123");
     const empPassword = await hashPassword("Employee@123");
 
-    const demoUsers = [
-      {
-        employeeCode: "EMP001",
-        name: "Super Admin",
-        email: "admin@empnexa.com",
-        passwordHash: adminPassword,
-        phone: "+1234567890",
-        department: "Administration",
-        designation: "Chief Executive",
-        salaryInPaise: 15000000, 
-        joiningDate: "2026-01-01",
-        status: "active" as const,
-        role: "super_admin" as const,
-      },
-      {
-        employeeCode: "EMP002",
-        name: "HR Manager",
-        email: "hr@empnexa.com",
-        passwordHash: hrPassword,
-        phone: "+1234567891",
-        department: "Human Resources",
-        designation: "HR Director",
-        salaryInPaise: 10000000, 
-        joiningDate: "2026-01-15",
-        status: "active" as const,
-        role: "hr_manager" as const,
-      },
-      {
-        employeeCode: "EMP003",
-        name: "Employee",
-        email: "employee@empnexa.com",
-        passwordHash: empPassword,
-        phone: "+1234567892",
-        department: "Engineering",
-        designation: "Software Engineer",
-        salaryInPaise: 8000000,
-        joiningDate: "2026-02-01",
-        status: "active" as const,
-        role: "employee" as const,
-      },
-    ];
+    // 1. Create top level (Super Admin)
+    const superAdminRes = await db.insert(employees).values({
+      employeeCode: "EMP101",
+      name: "Super Admin",
+      email: "admin@empnexa.com",
+      passwordHash: adminPassword,
+      phone: "+1234567890",
+      department: "Administration",
+      designation: "Chief Executive",
+      salaryInPaise: 15000000, 
+      joiningDate: "2026-01-01",
+      status: "active",
+      role: "super_admin",
+    }).onConflictDoUpdate({ target: employees.email, set: { name: "Super Admin" } }).returning({ id: employees.id });
+    const superAdminId = superAdminRes[0].id;
+
+    // 2. Create middle managers
+    const hrManagerRes = await db.insert(employees).values({
+      employeeCode: "EMP102",
+      name: "HR Manager",
+      email: "hr@empnexa.com",
+      passwordHash: hrPassword,
+      phone: "+1234567891",
+      department: "Human Resources",
+      designation: "HR Director",
+      salaryInPaise: 10000000, 
+      joiningDate: "2026-01-15",
+      status: "active",
+      role: "hr_manager",
+      managerId: superAdminId,
+    }).onConflictDoUpdate({ target: employees.email, set: { managerId: superAdminId } }).returning({ id: employees.id });
+    const hrManagerId = hrManagerRes[0].id;
+
+    const engLeadRes = await db.insert(employees).values({
+      employeeCode: "EMP103",
+      name: "Engineering Lead",
+      email: "englead@empnexa.com",
+      passwordHash: empPassword,
+      phone: "+1234567892",
+      department: "Engineering",
+      designation: "Engineering Lead",
+      salaryInPaise: 12000000, 
+      joiningDate: "2026-01-20",
+      status: "active",
+      role: "employee",
+      managerId: superAdminId,
+    }).onConflictDoUpdate({ target: employees.email, set: { managerId: superAdminId } }).returning({ id: employees.id });
+    const engLeadId = engLeadRes[0].id;
+
+    const prodManagerRes = await db.insert(employees).values({
+      employeeCode: "EMP104",
+      name: "Product Manager",
+      email: "pm@empnexa.com",
+      passwordHash: empPassword,
+      phone: "+1234567893",
+      department: "Product",
+      designation: "Product Manager",
+      salaryInPaise: 11000000, 
+      joiningDate: "2026-01-25",
+      status: "active",
+      role: "employee",
+      managerId: superAdminId,
+    }).onConflictDoUpdate({ target: employees.email, set: { managerId: superAdminId } }).returning({ id: employees.id });
+    const prodManagerId = prodManagerRes[0].id;
 
     const defaultPassword = await hashPassword("Welcome@123");
 
-    const additionalEmployees = [
-      { employeeCode: "EMP004", name: "Alice Smith", email: "alice@empnexa.com", department: "Engineering", role: "employee" as const },
-      { employeeCode: "EMP005", name: "Bob Jones", email: "bob@empnexa.com", department: "Product", role: "employee" as const },
-      { employeeCode: "EMP006", name: "Charlie Brown", email: "charlie@empnexa.com", department: "Design", role: "employee" as const },
-      { employeeCode: "EMP007", name: "Diana Prince", email: "diana@empnexa.com", department: "Sales", role: "employee" as const },
-      { employeeCode: "EMP008", name: "Evan Wright", email: "evan@empnexa.com", department: "Finance", role: "employee" as const },
-      { employeeCode: "EMP009", name: "Fiona Gallagher", email: "fiona@empnexa.com", department: "Operations", role: "employee" as const },
-      { employeeCode: "EMP010", name: "George Miller", email: "george@empnexa.com", department: "Engineering", role: "employee" as const },
-      { employeeCode: "EMP011", name: "Hannah Lee", email: "hannah@empnexa.com", department: "Human Resources", role: "employee" as const },
+    // 3. Create reportees
+    const reportees = [
+      { employeeCode: "EMP105", name: "HR Executive", email: "hrexec@empnexa.com", department: "Human Resources", designation: "HR Executive", role: "employee" as const, managerId: hrManagerId },
+      { employeeCode: "EMP106", name: "Recruiter", email: "recruiter@empnexa.com", department: "Human Resources", designation: "Recruiter", role: "employee" as const, managerId: hrManagerId },
+      { employeeCode: "EMP107", name: "Frontend Developer", email: "frontend@empnexa.com", department: "Engineering", designation: "Frontend Developer", role: "employee" as const, managerId: engLeadId },
+      { employeeCode: "EMP108", name: "Backend Developer", email: "backend@empnexa.com", department: "Engineering", designation: "Backend Developer", role: "employee" as const, managerId: engLeadId },
+      { employeeCode: "EMP109", name: "Product Designer", email: "designer@empnexa.com", department: "Product", designation: "Product Designer", role: "employee" as const, managerId: prodManagerId },
+      { employeeCode: "EMP110", name: "Business Analyst", email: "ba@empnexa.com", department: "Product", designation: "Business Analyst", role: "employee" as const, managerId: prodManagerId },
     ];
 
-    // Seed Demo Users
-    console.log("Seeding core demo accounts...");
-    for (const user of demoUsers) {
-      await db.insert(employees).values(user).onConflictDoUpdate({
-        target: employees.email,
-        set: { ...user, updatedAt: new Date() }
-      });
-    }
-
-    // Seed Additional Employees
-    console.log("Seeding additional realistic employees...");
-    for (const emp of additionalEmployees) {
+    console.log("Seeding reportees...");
+    for (const emp of reportees) {
       await db.insert(employees).values({
         employeeCode: emp.employeeCode,
         name: emp.name,
@@ -84,12 +96,16 @@ async function seed() {
         passwordHash: defaultPassword,
         phone: "+1000000000",
         department: emp.department,
-        designation: "Staff",
+        designation: emp.designation,
         salaryInPaise: 6000000,
         joiningDate: "2026-03-01",
         status: "active",
         role: emp.role,
-      }).onConflictDoNothing({ target: employees.email });
+        managerId: emp.managerId,
+      }).onConflictDoUpdate({
+        target: employees.email,
+        set: { managerId: emp.managerId }
+      });
     }
 
     console.log("✅ Database seeding completed successfully.");

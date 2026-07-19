@@ -4,7 +4,7 @@ import { authorize } from "../../middleware/authorize";
 import { validate } from "../../middleware/validate";
 import { EmployeeController } from "./employee.controller";
 import { USER_ROLES } from "@empnexa/shared";
-import { employeeListQuerySchema, createEmployeeSchema, employeeIdParamsSchema, updateEmployeeSchema } from "@empnexa/shared";
+import { employeeListQuerySchema, createEmployeeSchema, employeeIdParamsSchema, updateEmployeeSchema, managerOptionsQuerySchema } from "@empnexa/shared";
 
 import { asyncHandler } from "../../utils/async-handler";
 
@@ -31,6 +31,7 @@ router.post(
 router.get(
   "/manager-options",
   authorize(USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER),
+  validate(managerOptionsQuerySchema, "query"),
   asyncHandler(controller.managerOptions.bind(controller))
 );
 

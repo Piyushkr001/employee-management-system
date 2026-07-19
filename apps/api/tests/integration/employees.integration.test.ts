@@ -1,11 +1,11 @@
 import { describe, it, expect, spyOn, beforeEach } from "bun:test";
 import request from "supertest";
-import app from "../src/app";
-import { EmployeeRepository } from "../src/modules/employees/employee.repository";
+import app from "../../src/app";
+import { EmployeeRepository } from "../../src/modules/employees/employee.repository";
 import jwt from "jsonwebtoken";
-import { signAccessToken } from "../src/utils/jwt";
-import { env } from "../src/config/env";
-import { AuthRepository } from "../src/modules/auth/auth.repository";
+import { signAccessToken } from "../../src/utils/jwt";
+import { env } from "../../src/config/env";
+import { AuthRepository } from "../../src/modules/auth/auth.repository";
 
 describe("Employee API Integration Tests", () => {
   beforeEach(() => {
@@ -124,8 +124,8 @@ describe("Employee API Integration Tests", () => {
       .set("X-EmpNexa-Request", "web")
       .send({ name: "Changed Name", salary: 99999 });
       
-    // Should be 400 since employees can't update sensitive fields and allowedInput is empty
-    expect(res.status).toBe(400);
+    // Should be 403 since employees can't update sensitive fields
+    expect(res.status).toBe(403);
   });
 
   it("should successfully update via PUT /api/employees/:id", async () => {

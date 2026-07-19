@@ -1,5 +1,6 @@
 import { getCurrentUserCached } from "@/features/auth/auth.server";
 import { getEmployeesServer } from "@/features/employees/employee.server";
+import { employeeListQuerySchema } from "@empnexa/shared";
 import { EmployeeTable } from "@/components/employees/employee-table";
 import { EmployeeSearch } from "@/components/employees/employee-search";
 import { EmployeeFilters } from "@/components/employees/employee-filters";
@@ -19,20 +20,34 @@ export default async function EmployeesPage({
     redirect("/unauthorized");
   }
 
-  const query = {
-    page: resolvedSearchParams.page ? parseInt(resolvedSearchParams.page, 10) : 1,
-    limit: resolvedSearchParams.limit ? parseInt(resolvedSearchParams.limit, 10) : 10,
-    search: resolvedSearchParams.search,
-    department: resolvedSearchParams.department,
-    designation: resolvedSearchParams.designation,
-    status: resolvedSearchParams.status,
-    role: resolvedSearchParams.role,
-    sortBy: resolvedSearchParams.sortBy,
-    sortOrder: resolvedSearchParams.sortOrder,
+  function firstValue(value: string | string[] | undefined): string | undefined {
+    return Array.isArray(value) ? value[0] : value;
+  }
+
+  const rawQuery = {
+    page: firstValue(resolvedSearchParams.page),
+    limit: firstValue(resolvedSearchParams.limit),
+    search: firstValue(resolvedSearchParams.search),
+    department: firstValue(resolvedSearchParams.department),
+    designation: firstValue(resolvedSearchParams.designation),
+    status: firstValue(resolvedSearchParams.status),
+    role: firstValue(resolvedSearchParams.role),
+    managerId: firstValue(resolvedSearchParams.managerId),
+    sortBy: firstValue(resolvedSearchParams.sortBy),
+    sortOrder: firstValue(resolvedSearchParams.sortOrder),
   };
+
+  const parsed = employeeListQuerySchema.safeParse(rawQuery);
+  const query = parsed.success ? parsed.data : employeeListQuerySchema.parse({});
 
   const res = await getEmployeesServer(query);
   const { employees, pagination } = res.data || { employees: [], pagination: { page: 1, total: 0, totalPages: 1 } };
+
+  if (pagination.total > 0 && query.page > pagination.totalPages) {
+    const newSearchParams = new URLSearchParams(resolvedSearchParams as Record<string, string>);
+    newSearchParams.set("page", pagination.totalPages.toString());
+    redirect(`/employees?${newSearchParams.toString()}`);
+  }
 
   return (
     <div className="space-y-6">

@@ -1,8 +1,10 @@
 import { describe, it, expect, spyOn, beforeEach } from "bun:test";
 import request from "supertest";
-import app from "../src/app";
-import { AuthRepository } from "../src/modules/auth/auth.repository";
-import { hashPassword } from "../src/utils/password";
+import app from "../../src/app";
+import { db, client } from "../../src/db";
+import { employees } from "../../src/db/schema/employees";
+import { AuthRepository } from "../../src/modules/auth/auth.repository";
+import { hashPassword } from "../../src/utils/password";
 
 describe("Auth API Integration Tests", () => {
   beforeEach(async () => {

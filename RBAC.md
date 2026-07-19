@@ -23,3 +23,8 @@ Standard access for regular staff.
 ## Hierarchy Rules
 - A user cannot be assigned a manager who reports to them (Circular Manager Prevention).
 - An employee cannot manage an HR manager or Super Admin.
+
+## Immutability & Rejection Rules
+- `employeeCode` is immutable after creation and cannot be updated by any role.
+- Attempts to update forbidden fields explicitly return `403 Forbidden` rather than silently ignoring the update (e.g. HR trying to assign a Super Admin role, or Employee trying to update their own salary).
+- Password hashes and other sensitive server-side fields are never exposed in the employee list selection payload.

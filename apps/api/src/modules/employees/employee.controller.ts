@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { EmployeeService } from "./employee.service";
 import { sendResponse } from "../../utils/response";
-import { EmployeeListQuery, EmployeeIdParams, CreateEmployeeInput, UpdateEmployeeInput } from "@empnexa/shared";
+import { EmployeeListQuery, EmployeeIdParams, CreateEmployeeInput, UpdateEmployeeInput, ManagerOptionsQuery } from "@empnexa/shared";
 import { canListEmployees, canViewEmployee, canCreateEmployee, canUpdateEmployee, filterAllowedUpdateFields, canDeleteEmployee } from "./employee.authorization";
 import { ApiError } from "../../utils/api-error";
 import { AuthRepository } from "../auth/auth.repository";
@@ -32,13 +32,12 @@ export class EmployeeController {
         return next(new ApiError(403, "You do not have permission to view manager options", "FORBIDDEN"));
       }
 
-      const { search, excludeEmployeeId, limit } = req.query as { search?: string; excludeEmployeeId?: string; limit?: string };
-      const parsedLimit = limit ? parseInt(limit, 10) : 100;
+      const query = req.query as unknown as ManagerOptionsQuery;
       
       const options = await this.service.getManagerOptions({
-        search,
-        excludeEmployeeId,
-        limit: isNaN(parsedLimit) ? 100 : parsedLimit
+        search: query.search,
+        excludeEmployeeId: query.excludeEmployeeId,
+        limit: query.limit
       });
 
       sendResponse(res, 200, "Manager options retrieved successfully", { managers: options });

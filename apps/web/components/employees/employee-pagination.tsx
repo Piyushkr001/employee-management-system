@@ -17,7 +17,7 @@ export function EmployeePagination({ page, totalPages, total }: PaginationProps)
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", newPage.toString());
-    router.push(`?${params.toString()}`);
+    router.replace(`?${params.toString()}`);
   };
 
   return (

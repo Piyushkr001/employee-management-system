@@ -122,6 +122,8 @@ export const updateEmployeeSchema = createEmployeeSchema.partial().extend({
 }).omit({
   // We do not want passwords updatable via the standard edit employee endpoint during this phase
   password: true,
+  // Employee code is immutable
+  employeeCode: true,
 });
 
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;

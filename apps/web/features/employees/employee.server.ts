@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import type { ApiResponse } from "@empnexa/shared";
+import { AUTH_COOKIE_NAME } from "@/lib/auth-config";
 
 const getServerApiBaseUrl = () =>
   (
@@ -14,11 +15,7 @@ export async function fetchEmployeeApiServer<T>(
 ): Promise<ApiResponse<T>> {
   const cookieStore = await cookies();
 
-  const cookieName =
-    process.env.AUTH_COOKIE_NAME ??
-    "empnexa_token";
-
-  const token = cookieStore.get(cookieName)?.value;
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
   if (!token) {
     throw new Error("Not authenticated");
@@ -32,7 +29,7 @@ export async function fetchEmployeeApiServer<T>(
       ...init,
       headers: {
         Accept: "application/json",
-        Cookie: `${cookieName}=${token}`,
+        Cookie: `${AUTH_COOKIE_NAME}=${token}`,
         ...init.headers,
       },
       cache: "no-store",

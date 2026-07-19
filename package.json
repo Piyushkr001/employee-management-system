@@ -1,5 +1,6 @@
 {
   "name": "empnexa",
+  "packageManager": "bun@1.3.14",
   "private": true,
   "workspaces": [
     "apps/*",

@@ -28,6 +28,9 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { PasswordInput } from "../auth/password-input";
 
+import { ManagerSelect } from "./manager-select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 type EmployeeFormProps = {
   currentUserRole: UserRole;
 } & (
@@ -38,7 +41,6 @@ type EmployeeFormProps = {
 export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [managers, setManagers] = useState<EmployeeDto[]>([]);
   const isEditing = mode === "edit";
 
   const defaultValues: any = isEditing ? {
@@ -75,30 +77,14 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
     defaultValues,
   });
 
-  useEffect(() => {
-    async function fetchManagers() {
-      try {
-        const res = await employeeApi.getManagerOptions(isEditing ? employee?.id : undefined);
-        if (res.data?.managers) {
-          setManagers(res.data.managers as any);
-        }
-      } catch (error) {
-        console.error("Failed to fetch managers", error);
-      }
-    }
-    
-    fetchManagers();
-  }, [isEditing, employee?.id]);
-
   const onSubmit = async (data: any) => {
     setIsLoading(true);
     try {
       if (isEditing) {
-        const { password, employeeCode, email, ...updateData } = data as any;
+        const { password, email, ...updateData } = data as any;
         
         const payload: UpdateEmployeeInput = { ...updateData };
         if (email !== employee.email) payload.email = email;
-        if (employeeCode !== employee.employeeCode) payload.employeeCode = employeeCode;
         
         await employeeApi.update(employee.id, payload);
         toast.success("Employee updated successfully");
@@ -298,26 +284,38 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Manager (Optional)</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value || "none"} 
+                <ManagerSelect 
+                  value={field.value || "none"}
+                  onChange={field.onChange}
+                  excludeEmployeeId={isEditing ? employee?.id : undefined}
                   disabled={isLoading}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a manager" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {managers.map(manager => (
-                      <SelectItem key={manager.id} value={manager.id}>
-                        {manager.name} ({manager.employeeCode})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="profileImageUrl"
+            render={({ field }) => (
+              <FormItem className="col-span-full flex flex-col md:flex-row items-center gap-4">
+                <div>
+                  <FormLabel>Profile Image URL</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="https://example.com/image.jpg" 
+                      disabled={isLoading} 
+                      {...field} 
+                      className="mt-2 w-full md:w-[400px]"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </div>
+                <Avatar className="h-16 w-16 mt-2 md:mt-0">
+                  <AvatarImage src={field.value || ""} alt="Preview" />
+                  <AvatarFallback>{form.watch("name")?.substring(0, 2).toUpperCase() || "UN"}</AvatarFallback>
+                </Avatar>
               </FormItem>
             )}
           />
