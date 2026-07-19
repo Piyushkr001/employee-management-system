@@ -12,11 +12,15 @@ export function unwrapPostgreSqlError(error: unknown): PostgreSqlError | null {
   const candidate = error as {
     code?: string;
     constraint?: string;
+    constraint_name?: string;
     detail?: string;
     cause?: unknown;
   };
 
   if (candidate.code) {
+    if (candidate.constraint_name && !candidate.constraint) {
+      candidate.constraint = candidate.constraint_name;
+    }
     return candidate;
   }
 

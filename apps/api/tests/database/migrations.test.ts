@@ -38,11 +38,16 @@ describe("Database Migrations", () => {
     `);
     const constraintNames = constraintsRes.map((r: any) => r.conname);
     
-    // Check constraints: salary >= 0, self-manager exclusion
     expect(constraintNames).toContain("employees_salary_non_negative");
     expect(constraintNames).toContain("employees_manager_not_self");
-    // Drizzle names constraints like `employees_salary_in_paise_check` by default or similar
-    expect(constraintNames.some((c: any) => c.includes("manager_id_fkey"))).toBe(true);
-    expect(constraintNames.some((c: any) => c.includes("check"))).toBe(true); // salary check, self-manager check
+    expect(constraintNames).toContain("employees_manager_id_employees_id_fk");
+
+    const indexRes = await testDb.execute(sql`
+      SELECT indexrelname FROM pg_stat_user_indexes
+      WHERE relname = 'employees';
+    `);
+    const indexNames = indexRes.map((r: any) => r.indexrelname);
+    expect(indexNames).toContain("employees_employee_code_unique");
+    expect(indexNames).toContain("employees_email_unique");
   });
 });

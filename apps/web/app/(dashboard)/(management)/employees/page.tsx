@@ -37,8 +37,20 @@ export default async function EmployeesPage({
     sortOrder: firstValue(resolvedSearchParams.sortOrder),
   };
 
-  const parsed = employeeListQuerySchema.safeParse(rawQuery);
-  const query = parsed.success ? parsed.data : employeeListQuerySchema.parse({});
+  const validQuery: any = {};
+  for (const [key, value] of Object.entries(rawQuery)) {
+    if (value !== undefined) {
+      const fieldSchema = (employeeListQuerySchema.shape as any)[key];
+      if (fieldSchema) {
+        const result = fieldSchema.safeParse(value);
+        if (result.success) {
+          validQuery[key] = result.data;
+        }
+      }
+    }
+  }
+
+  const query = employeeListQuerySchema.parse(validQuery);
 
   const res = await getEmployeesServer(query);
   const { employees, pagination } = res.data || { employees: [], pagination: { page: 1, total: 0, totalPages: 1 } };

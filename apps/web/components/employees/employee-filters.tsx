@@ -10,6 +10,8 @@ import { EMPLOYEE_STATUSES, EMPLOYEE_SORT_FIELDS, SORT_ORDERS } from "@empnexa/s
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ManagerSelect } from "./manager-select";
 import { useState, useEffect } from "react";
+import { employeeApi } from "@/features/employees/employee.api";
+import { ManagerOptionDto } from "@empnexa/shared";
 
 export function EmployeeFilters() {
   const router = useRouter();
@@ -41,6 +43,23 @@ export function EmployeeFilters() {
     setDepartment(searchParams.get("department") || "");
     setDesignation(searchParams.get("designation") || "");
   }, [searchParams]);
+
+  const managerId = searchParams.get("managerId");
+  const [currentManager, setCurrentManager] = useState<ManagerOptionDto | null>(null);
+
+  useEffect(() => {
+    if (!managerId) {
+      setCurrentManager(null);
+      return;
+    }
+    let isMounted = true;
+    employeeApi.getManagerOptionById(managerId).then((res) => {
+      if (isMounted && res.data) {
+        setCurrentManager(res.data as any);
+      }
+    }).catch(console.error);
+    return () => { isMounted = false; };
+  }, [managerId]);
 
   const applyTextFilters = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -90,6 +109,7 @@ export function EmployeeFilters() {
               <ManagerSelect 
                 value={searchParams.get("managerId") || ""}
                 onChange={(val) => handleFilterChange("managerId", val)}
+                currentManager={currentManager}
               />
             </div>
 

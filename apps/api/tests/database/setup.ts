@@ -3,12 +3,16 @@ import { testClient, testDb } from "./test-db";
 import { assertSafeTestDatabase } from "./database-safety";
 import { employees } from "../../src/db/schema";
 
+let isMigrated = false;
+
 export async function setupTestDatabase(): Promise<void> {
+  if (isMigrated) return;
   assertSafeTestDatabase();
 
   await migrate(testDb, {
     migrationsFolder: "./drizzle",
   });
+  isMigrated = true;
 }
 
 export async function cleanTestDatabase(): Promise<void> {
@@ -19,5 +23,5 @@ export async function cleanTestDatabase(): Promise<void> {
 }
 
 export async function closeTestDatabase(): Promise<void> {
-  // Let Bun naturally close the connection to avoid killing shared module connection across concurrent test files
+  // Let the test runner handle connection closure
 }

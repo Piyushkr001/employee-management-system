@@ -20,7 +20,7 @@ if (normalizedNormalUrl && normalizedTestUrl === normalizedNormalUrl) {
 }
 
 export const testClient = postgres(testDatabaseUrl, {
-  max: 1,
+  max: 4,
   prepare: false,
 });
 

@@ -22,6 +22,14 @@ export class EmployeeService {
     return await this.repository.getManagerOptions(query);
   }
 
+  async getManagerOptionById(id: string) {
+    const manager = await this.repository.getManagerOptionById(id);
+    if (!manager) {
+      throw new ApiError(404, "Manager not found", "EMPLOYEE_NOT_FOUND");
+    }
+    return manager;
+  }
+
   async getById(id: string, actorRole: UserRole) {
     const employee = await this.repository.findById(id);
     if (!employee) {
@@ -32,7 +40,7 @@ export class EmployeeService {
     return toEmployeeDto(employee as any, includeSalary);
   }
 
-  async create(input: CreateEmployeeInput) {
+  async create(input: CreateEmployeeInput, actor: { id: string; role: UserRole }) {
     try {
       const hashedPassword = await hashPassword(input.password);
       const salaryInPaise = Math.round(input.salary * 100);
@@ -44,7 +52,7 @@ export class EmployeeService {
         passwordHash: hashedPassword,
         salaryInPaise,
         joiningDate: input.joiningDate,
-      } as any);
+      } as any, actor);
 
       return toEmployeeDto(newEmployee as any, true);
     } catch (error: any) {
@@ -80,8 +88,8 @@ export class EmployeeService {
     }
   }
 
-  async softDelete(id: string) {
-    await this.repository.softDelete(id);
+  async softDelete(id: string, actor: { id: string; role: UserRole }) {
+    await this.repository.softDelete(id, actor);
     return { success: true };
   }
 }

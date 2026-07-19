@@ -3,7 +3,7 @@ import { employees } from "../../db/schema/employees";
 import { eq, and, isNull, ne, or, ilike, desc, asc, count, sql } from "drizzle-orm";
 import { EmployeeListQuery, UserRole } from "@empnexa/shared";
 import { ApiError } from "../../utils/api-error";
-import { EMPLOYEE_HIERARCHY_LOCK_KEY } from "./employee.constants";
+import { EMPLOYEE_HIERARCHY_LOCK_KEY, SUPER_ADMIN_INVARIANT_LOCK_KEY } from "./employee.constants";
 import { assertAllowedUpdateFields } from "./employee.authorization";
 
 type NewEmployee = typeof employees.$inferInsert;
@@ -50,8 +50,15 @@ export class EmployeeRepository {
     });
   }
 
-  async createEmployeeTransactionSafe(data: NewEmployee) {
+  async createEmployeeTransactionSafe(data: NewEmployee, actor: { id: string; role: UserRole }) {
     return await db.transaction(async (tx) => {
+      // Revalidate actor
+      const [actorRow] = await tx.select().from(employees).where(eq(employees.id, actor.id));
+      if (!actorRow || actorRow.status !== "active" || actorRow.deletedAt || actorRow.role !== actor.role) {
+         console.log("Actor validation failed in create:", { actorRow, actor });
+         throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
+      }
+
       if (data.managerId) {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
 
@@ -77,9 +84,32 @@ export class EmployeeRepository {
 
   async updateEmployeeTransactionSafe(id: string, data: Partial<NewEmployee>, actor?: { id: string; role: UserRole }) {
     return await db.transaction(async (tx) => {
-      // If managerId is being modified, acquire hierarchy lock
-      if (data.managerId !== undefined) {
+      // Super Admin protection pre-check
+      let targetIsActiveSuperAdmin = false;
+      const [preCheck] = await tx.select({ role: employees.role, status: employees.status }).from(employees).where(eq(employees.id, id));
+      if (preCheck && preCheck.role === "super_admin" && preCheck.status === "active") {
+        targetIsActiveSuperAdmin = true;
+      }
+
+      const mayRemoveActiveSuperAdmin = targetIsActiveSuperAdmin && 
+        ((data.role !== undefined && data.role !== "super_admin") ||
+         (data.status !== undefined && data.status !== "active"));
+
+      if (mayRemoveActiveSuperAdmin) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${SUPER_ADMIN_INVARIANT_LOCK_KEY})`);
+      }
+
+      // If managerId or status is being modified, acquire hierarchy lock
+      if (data.managerId !== undefined || data.status === "inactive") {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
+      }
+
+      if (actor) {
+        const [actorRow] = await tx.select().from(employees).where(eq(employees.id, actor.id));
+        if (!actorRow || actorRow.status !== "active" || actorRow.deletedAt || actorRow.role !== actor.role) {
+           console.log("Actor validation failed in update:", { actorRow, actor });
+           throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
+        }
       }
 
       // Lock target employee
@@ -128,6 +158,19 @@ export class EmployeeRepository {
 
         if (activeSuperAdmins.length <= 1 && activeSuperAdmins[0]?.id === id) {
           throw new ApiError(409, "Cannot demote or deactivate the last active Super Admin", "LAST_ACTIVE_SUPER_ADMIN");
+        }
+      }
+
+      // Manager deactivation policy
+      if (data.status === "inactive" && targetEmployee.status === "active") {
+        const reportees = await tx
+          .select({ id: employees.id })
+          .from(employees)
+          .where(and(eq(employees.managerId, id), eq(employees.status, "active"), isNull(employees.deletedAt)))
+          .for("update");
+
+        if (reportees.length > 0) {
+          throw new ApiError(409, "A manager cannot be deactivated while active reportees remain assigned.", "MANAGER_HAS_ACTIVE_REPORTEES");
         }
       }
 
@@ -194,8 +237,25 @@ export class EmployeeRepository {
     });
   }
 
-  async softDelete(id: string) {
+  async softDelete(id: string, actor: { id: string; role: UserRole }) {
     return await db.transaction(async (tx) => {
+      // Revalidate actor
+      const [actorRow] = await tx.select().from(employees).where(eq(employees.id, actor.id));
+      if (!actorRow || actorRow.status !== "active" || actorRow.deletedAt || actorRow.role !== actor.role) {
+         throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
+      }
+
+      // Pre-check for Super Admin
+      let targetIsActiveSuperAdmin = false;
+      const [preCheck] = await tx.select({ role: employees.role, status: employees.status }).from(employees).where(eq(employees.id, id));
+      if (preCheck && preCheck.role === "super_admin" && preCheck.status === "active") {
+        targetIsActiveSuperAdmin = true;
+      }
+
+      if (targetIsActiveSuperAdmin) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${SUPER_ADMIN_INVARIANT_LOCK_KEY})`);
+      }
+
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
 
       // Lock employee to delete
@@ -371,6 +431,23 @@ export class EmployeeRepository {
         status: true,
       },
       orderBy: [asc(employees.name)],
+    });
+  }
+
+  async getManagerOptionById(id: string) {
+    return await db.query.employees.findFirst({
+      where: and(
+        eq(employees.id, id),
+        isNull(employees.deletedAt)
+      ),
+      columns: {
+        id: true,
+        employeeCode: true,
+        name: true,
+        designation: true,
+        department: true,
+        status: true,
+      },
     });
   }
 }

@@ -19,6 +19,8 @@ describe("Transactional Creation", () => {
   });
 
   test("should rollback creation if manager does not exist", async () => {
+    const admin = await createActiveSuperAdmin();
+    const actor = { id: admin.id, role: admin.role };
     const promise = repo.createEmployeeTransactionSafe({
       employeeCode: "EMP-ROLL",
       name: "Test",
@@ -32,7 +34,7 @@ describe("Transactional Creation", () => {
       status: "active",
       role: "employee",
       managerId: "00000000-0000-0000-0000-000000000000"
-    });
+    }, actor);
     
     await expect(promise).rejects.toThrow("Selected manager does not exist");
     
@@ -42,6 +44,8 @@ describe("Transactional Creation", () => {
   });
 
   test("should rollback creation if manager is inactive", async () => {
+    const admin = await createActiveSuperAdmin();
+    const actor = { id: admin.id, role: admin.role };
     const manager = await createTestEmployee({ status: "inactive" });
 
     const promise = repo.createEmployeeTransactionSafe({
@@ -57,12 +61,14 @@ describe("Transactional Creation", () => {
       status: "active",
       role: "employee",
       managerId: manager.id
-    });
+    }, actor);
 
     await expect(promise).rejects.toThrow("Selected manager is inactive");
   });
 
   test("should successfully create employee with active manager", async () => {
+    const admin = await createActiveSuperAdmin();
+    const actor = { id: admin.id, role: admin.role };
     const manager = await createTestEmployee({ status: "active" });
 
     const emp = await repo.createEmployeeTransactionSafe({
@@ -78,7 +84,7 @@ describe("Transactional Creation", () => {
       status: "active",
       role: "employee",
       managerId: manager.id
-    });
+    }, actor);
 
     expect(emp.managerId).toBe(manager.id);
   });

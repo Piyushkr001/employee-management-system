@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -35,22 +35,31 @@ export function ManagerSelect({ value, onChange, excludeEmployeeId, disabled, cu
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const requestIdRef = useRef(0);
+
   useEffect(() => {
     if (!open) return;
 
     const controller = new AbortController();
+    const currentRequestId = ++requestIdRef.current;
 
     const loadManagers = async () => {
       setIsLoading(true);
       setError(null);
       try {
         const res = await employeeApi.getManagerOptions(excludeEmployeeId, search, controller.signal);
-        setManagers(res.data?.managers as any || []);
+        if (currentRequestId === requestIdRef.current) {
+          setManagers((res as any).data?.managers || []);
+        }
       } catch (err: any) {
         if (err.name === 'AbortError') return;
-        setError("Failed to load managers");
+        if (currentRequestId === requestIdRef.current) {
+          setError("Failed to load managers");
+        }
       } finally {
-        setIsLoading(false);
+        if (currentRequestId === requestIdRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 

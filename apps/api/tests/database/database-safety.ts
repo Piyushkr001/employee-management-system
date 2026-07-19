@@ -11,10 +11,24 @@ export function assertSafeTestDatabase(): void {
   }
 
   const parsed = new URL(testDatabaseUrl);
+  const normalParsed = normalDatabaseUrl ? new URL(normalDatabaseUrl) : null;
+
+  if (normalParsed) {
+    if (
+      parsed.hostname === normalParsed.hostname &&
+      parsed.port === normalParsed.port &&
+      parsed.username === normalParsed.username &&
+      parsed.pathname === normalParsed.pathname
+    ) {
+      throw new Error("Refusing to run tests because TEST_DATABASE_URL connects to the same DB as DATABASE_URL");
+    }
+  }
+
   const databaseName = parsed.pathname.replace(/^\//, "").toLowerCase();
 
-  if (!databaseName.includes("test")) {
-    throw new Error("Refusing to run destructive database tests because the database name does not contain 'test'");
+  const isSafeTestName = /(^|[_-])test($|[_-])/.test(databaseName);
+  if (!isSafeTestName) {
+    throw new Error("Refusing to run destructive database tests against a database whose name is not explicitly marked as test");
   }
 
   if (process.env.NODE_ENV !== "test") {

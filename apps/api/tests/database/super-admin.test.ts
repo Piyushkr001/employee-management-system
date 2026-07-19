@@ -38,8 +38,9 @@ describe("Super Admin Protection", () => {
 
   test("should prevent soft-deleting the last active super admin", async () => {
     const admin = await createActiveSuperAdmin();
+    const actor = { id: admin.id, role: admin.role };
     await expect(
-      repo.softDelete(admin.id)
+      repo.softDelete(admin.id, actor)
     ).rejects.toThrow("Cannot remove the last active Super Admin");
   });
 
@@ -48,7 +49,8 @@ describe("Super Admin Protection", () => {
     // they don't count as the "last active", so demoting them is allowed.
     // However, our code explicitly checks `removesActiveSuperAdmin`.
     const admin = await createInactiveSuperAdmin();
-    const actor = { id: admin.id, role: admin.role };
+    const activeAdmin = await createActiveSuperAdmin();
+    const actor = { id: activeAdmin.id, role: activeAdmin.role };
 
     const updated = await repo.updateEmployeeTransactionSafe(admin.id, { role: "employee" }, actor);
     expect(updated.role).toBe("employee");

@@ -57,6 +57,6 @@ export class AuthService {
       throw new ApiError(403, "Account is inactive", "ACCOUNT_INACTIVE");
     }
 
-    return toAuthenticatedUserDto(employee);
+    return toAuthenticatedUserDto(employee as any);
   }
 }

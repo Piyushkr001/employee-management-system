@@ -43,10 +43,9 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = mode === "edit";
 
-  const defaultValues: any = isEditing ? {
+  const defaultValues = isEditing ? {
     name: employee.name,
     email: employee.email,
-    employeeCode: employee.employeeCode,
     phone: employee.phone,
     department: employee.department,
     designation: employee.designation,
@@ -65,16 +64,18 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
     department: "",
     designation: "",
     salary: 0,
-    status: "active",
-    role: "employee",
+    status: "active" as const,
+    role: "employee" as const,
     joiningDate: new Date().toISOString().split("T")[0],
     profileImageUrl: "",
     managerId: "",
   };
 
-  const form = useForm<any>({
+  type FormType = CreateEmployeeInput & UpdateEmployeeInput;
+
+  const form = useForm<FormType>({
     resolver: zodResolver(isEditing ? updateEmployeeSchema : createEmployeeSchema) as any,
-    defaultValues,
+    defaultValues: defaultValues as any,
   });
 
   const { dirtyFields } = form.formState;
@@ -145,17 +146,24 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="employeeCode"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Employee Code</FormLabel>
-                <FormControl><Input placeholder="EMP001" disabled={isLoading || isEditing} {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {!isEditing ? (
+            <FormField
+              control={form.control}
+              name="employeeCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Employee Code</FormLabel>
+                  <FormControl><Input placeholder="EMP001" disabled={isLoading} {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : (
+            <div className="space-y-2">
+              <FormLabel>Employee Code</FormLabel>
+              <Input value={employee?.employeeCode} disabled readOnly className="bg-muted" />
+            </div>
+          )}
 
           {!isEditing && (
             <FormField

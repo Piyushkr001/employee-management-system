@@ -19,9 +19,11 @@ describe("Soft Delete Integrity", () => {
   });
 
   test("should allow deleting an employee with no reportees", async () => {
+    const admin = await createActiveSuperAdmin();
+    const actor = { id: admin.id, role: admin.role };
     const emp = await createTestEmployee();
     
-    const deleted = await repo.softDelete(emp.id);
+    const deleted = await repo.softDelete(emp.id, actor);
     expect(deleted.deletedAt).toBeDefined();
 
     const fetched = await repo.findById(emp.id);
@@ -29,15 +31,19 @@ describe("Soft Delete Integrity", () => {
   });
 
   test("should reject deleting a manager with direct reportees", async () => {
+    const admin = await createActiveSuperAdmin();
+    const actor = { id: admin.id, role: admin.role };
     const manager = await createTestEmployee();
     const reportee = await createTestEmployee({ managerId: manager.id });
 
     await expect(
-      repo.softDelete(manager.id)
+      repo.softDelete(manager.id, actor)
     ).rejects.toThrow("Reassign direct reportees before deleting this employee");
   });
 
   test("concurrent manager deletion vs employee creation", async () => {
+    const admin = await createActiveSuperAdmin();
+    const actor = { id: admin.id, role: admin.role };
     const manager = await createTestEmployee();
     
     // Concurrent attempt to create reportee while deleting manager
@@ -54,9 +60,9 @@ describe("Soft Delete Integrity", () => {
       status: "active",
       role: "employee",
       managerId: manager.id
-    });
+    }, actor);
 
-    const attempt2 = repo.softDelete(manager.id);
+    const attempt2 = repo.softDelete(manager.id, actor);
 
     const results = await Promise.allSettled([attempt1, attempt2]);
     

@@ -46,6 +46,22 @@ export class EmployeeController {
     }
   };
 
+  getManagerOptionById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const actor = req.user!;
+      if (!canListEmployees(actor)) {
+        return next(new ApiError(403, "You do not have permission to view manager options", "FORBIDDEN"));
+      }
+
+      const params = req.params as unknown as EmployeeIdParams;
+      const option = await this.service.getManagerOptionById(params.id);
+
+      sendResponse(res, 200, "Manager option retrieved successfully", option);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const actor = req.user!;
@@ -79,7 +95,7 @@ export class EmployeeController {
         return next(new ApiError(403, "You do not have permission to create this employee", "FORBIDDEN"));
       }
 
-      const employee = await this.service.create(input);
+      const employee = await this.service.create(input, actor);
       sendResponse(res, 201, "Employee created successfully", employee);
     } catch (error) {
       next(error);
@@ -131,7 +147,7 @@ export class EmployeeController {
         return next(new ApiError(403, "You do not have permission to delete this employee", "FORBIDDEN"));
       }
 
-      await this.service.softDelete(params.id);
+      await this.service.softDelete(params.id, actor);
       sendResponse(res, 200, "Employee deleted successfully");
     } catch (error) {
       next(error);

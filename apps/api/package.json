@@ -16,7 +16,7 @@
     "test": "bun test tests/auth.test.ts tests/integration",
     "test:unit": "bun test tests/auth.test.ts",
     "test:http": "bun test tests/integration",
-    "test:db": "NODE_ENV=test bun test --timeout 15000 --preload tests/database/preload.ts tests/database",
+    "test:db": "NODE_ENV=test bun test --timeout 15000 --preload tests/database/preload.ts tests/database/all.database.test.ts",
     "test:all": "bun run test && bun run test:db"
   },
   "dependencies": {

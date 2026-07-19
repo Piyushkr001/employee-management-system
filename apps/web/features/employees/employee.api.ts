@@ -54,6 +54,13 @@ export const employeeApi = {
     );
   },
 
+  getManagerOptionById: async (id: string, signal?: AbortSignal) => {
+    return fetchApi<Pick<EmployeeDto, "id" | "employeeCode" | "name" | "designation" | "department" | "status">>(
+      `/employees/manager-options/${id}`,
+      { method: "GET", signal }
+    );
+  },
+
   getById: async (id: string) => {
     return fetchApi<EmployeeDto>(`/employees/${id}`, {
       method: "GET",
