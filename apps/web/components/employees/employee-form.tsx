@@ -289,6 +289,7 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
                   onChange={field.onChange}
                   excludeEmployeeId={isEditing ? employee?.id : undefined}
                   disabled={isLoading}
+                  currentManager={isEditing ? employee?.manager : undefined}
                 />
                 <FormMessage />
               </FormItem>

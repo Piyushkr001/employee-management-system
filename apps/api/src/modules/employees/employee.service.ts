@@ -32,47 +32,8 @@ export class EmployeeService {
     return toEmployeeDto(employee as any, includeSalary);
   }
 
-  async validateManagerAssignment(employeeId: string, proposedManagerId: string | null) {
-    if (!proposedManagerId) {
-      return;
-    }
-
-    if (proposedManagerId === employeeId) {
-      throw new ApiError(422, "Employee cannot manage themselves", "INVALID_MANAGER");
-    }
-
-    let currentManagerId: string | null = proposedManagerId;
-    const visited = new Set<string>();
-
-    while (currentManagerId) {
-      if (currentManagerId === employeeId) {
-        throw new ApiError(409, "Circular reporting structure detected", "CIRCULAR_REPORTING");
-      }
-      if (visited.has(currentManagerId)) {
-        throw new ApiError(409, "Corrupted hierarchy detected", "CIRCULAR_REPORTING");
-      }
-      visited.add(currentManagerId);
-
-      const manager = await this.repository.findManagerIdentityById(currentManagerId);
-      if (!manager || manager.deletedAt) {
-        throw new ApiError(422, "Invalid manager ID or manager is deleted", "INVALID_MANAGER");
-      }
-      if (manager.status !== "active") {
-        throw new ApiError(422, "Manager must be active", "INVALID_MANAGER");
-      }
-
-      currentManagerId = manager.managerId;
-    }
-  }
-
   async create(input: CreateEmployeeInput) {
     try {
-      // Validate manager if provided
-      if (input.managerId) {
-        // use a fake id that will never match a real manager ID for cycle check on creation
-        await this.validateManagerAssignment("NEW_EMPLOYEE", input.managerId);
-      }
-
       const hashedPassword = await hashPassword(input.password);
       const salaryInPaise = Math.round(input.salary * 100);
 
@@ -84,6 +45,11 @@ export class EmployeeService {
         salaryInPaise,
         joiningDate: input.joiningDate,
       } as any);
+
+      // if managerId is provided on creation, we can update it transaction-safely
+      if (input.managerId) {
+        await this.repository.updateEmployeeTransactionSafe(newEmployee.id, { managerId: input.managerId });
+      }
 
       return toEmployeeDto(newEmployee as any, true);
     } catch (error: any) {
@@ -98,16 +64,6 @@ export class EmployeeService {
 
   async update(id: string, input: UpdateEmployeeInput, actorRole: UserRole) {
     try {
-      const employee = await this.repository.findById(id);
-      if (!employee) {
-        throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
-      }
-
-      // Validate manager if provided
-      if (input.managerId !== undefined) {
-        await this.validateManagerAssignment(id, input.managerId);
-      }
-
       const updateData: any = { ...input };
 
       if (input.salary !== undefined) {
@@ -115,27 +71,8 @@ export class EmployeeService {
         delete updateData.salary;
       }
 
-      let updatedEmployee;
+      const updatedEmployee = await this.repository.updateEmployeeTransactionSafe(id, updateData);
       
-      const removesActiveSuperAdmin =
-        employee.role === "super_admin" &&
-        employee.status === "active" &&
-        employee.deletedAt === null &&
-        ((input.role !== undefined && input.role !== "super_admin") ||
-         (input.status !== undefined && input.status !== "active"));
-
-      if (removesActiveSuperAdmin) {
-        try {
-          updatedEmployee = await this.repository.updateWithSuperAdminCheck(id, updateData);
-        } catch (e: any) {
-          if (e.message === "LAST_ACTIVE_SUPER_ADMIN") {
-            throw new ApiError(409, "Cannot demote or deactivate the last active Super Admin", "LAST_ACTIVE_SUPER_ADMIN");
-          }
-          throw e;
-        }
-      } else {
-        updatedEmployee = await this.repository.update(id, updateData);
-      }
       const includeSalary = actorRole === "super_admin" || actorRole === "hr_manager";
       return toEmployeeDto(updatedEmployee as any, includeSalary);
     } catch (error: any) {
@@ -149,33 +86,7 @@ export class EmployeeService {
   }
 
   async softDelete(id: string) {
-    const employee = await this.repository.findById(id);
-    if (!employee) {
-      throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
-    }
-
-    const reporteeCount = await this.repository.countReportees(id);
-    if (reporteeCount > 0) {
-      throw new ApiError(409, "Cannot delete employee because they have reportees. Reassign them first.", "EMPLOYEE_HAS_REPORTEES");
-    }
-
-    const removesActiveSuperAdmin = 
-      employee.role === "super_admin" && 
-      employee.status === "active" && 
-      employee.deletedAt === null;
-
-    if (removesActiveSuperAdmin) {
-      try {
-        await this.repository.softDeleteWithSuperAdminCheck(id);
-      } catch (e: any) {
-        if (e.message === "LAST_ACTIVE_SUPER_ADMIN") {
-          throw new ApiError(409, "Cannot delete the last active Super Admin", "LAST_ACTIVE_SUPER_ADMIN");
-        }
-        throw e;
-      }
-    } else {
-      await this.repository.softDelete(id);
-    }
+    await this.repository.softDelete(id);
     return { success: true };
   }
 }

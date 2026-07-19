@@ -25,11 +25,12 @@ interface ManagerSelectProps {
   onChange: (value: string) => void;
   excludeEmployeeId?: string;
   disabled?: boolean;
+  currentManager?: { id: string; name: string; employeeCode: string; designation: string } | null;
 }
 
-export function ManagerSelect({ value, onChange, excludeEmployeeId, disabled }: ManagerSelectProps) {
+export function ManagerSelect({ value, onChange, excludeEmployeeId, disabled, currentManager }: ManagerSelectProps) {
   const [open, setOpen] = useState(false);
-  const [managers, setManagers] = useState<ManagerOptionDto[]>([]);
+  const [managers, setManagers] = useState<ManagerOptionDto[]>(currentManager ? [currentManager as any] : []);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,13 +38,16 @@ export function ManagerSelect({ value, onChange, excludeEmployeeId, disabled }: 
   useEffect(() => {
     if (!open) return;
 
+    const controller = new AbortController();
+
     const loadManagers = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const res = await employeeApi.getManagerOptions(excludeEmployeeId, search);
+        const res = await employeeApi.getManagerOptions(excludeEmployeeId, search, controller.signal);
         setManagers(res.data?.managers as any || []);
-      } catch (err) {
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
         setError("Failed to load managers");
       } finally {
         setIsLoading(false);
@@ -51,7 +55,10 @@ export function ManagerSelect({ value, onChange, excludeEmployeeId, disabled }: 
     };
 
     const timeoutId = setTimeout(loadManagers, 300);
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [search, open, excludeEmployeeId]);
 
   const selectedManager = managers.find((m) => m.id === value);

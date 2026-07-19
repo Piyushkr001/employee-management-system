@@ -111,7 +111,7 @@ describe("Employee API Integration Tests", () => {
   });
 
   it("should fail updating employee code or salary if unauthorized (non HR)", async () => {
-    spyOn(EmployeeRepository.prototype, "update").mockImplementation(async (id, data) => {
+    spyOn(EmployeeRepository.prototype, "updateEmployeeTransactionSafe").mockImplementation(async (id, data) => {
       return { id, ...data } as any;
     });
 
@@ -129,7 +129,7 @@ describe("Employee API Integration Tests", () => {
   });
 
   it("should successfully update via PUT /api/employees/:id", async () => {
-    spyOn(EmployeeRepository.prototype, "update").mockImplementation(async (id, data) => {
+    spyOn(EmployeeRepository.prototype, "updateEmployeeTransactionSafe").mockImplementation(async (id, data) => {
       return { id, ...data } as any;
     });
 
@@ -147,7 +147,6 @@ describe("Employee API Integration Tests", () => {
     spyOn(EmployeeRepository.prototype, "softDelete").mockImplementation(async () => {
       return { id: "11111111-1111-1111-1111-111111111111" } as any;
     });
-    spyOn(EmployeeRepository.prototype, "countReportees").mockImplementation(async () => 0);
 
     const res = await request(app)
       .delete("/api/employees/11111111-1111-1111-1111-111111111111")

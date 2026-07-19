@@ -40,8 +40,9 @@ export function LoginForm() {
     try {
       const res = await authApi.login(data)
       
-      const safeRedirect = getSafeRedirect(searchParams.get("redirect"))
-      const roleRedirect = (res.data?.user?.role === "super_admin" || res.data?.user?.role === "hr_manager")
+      const userRole = res.data?.user?.role || "employee"
+      const safeRedirect = getSafeRedirect(searchParams.get("redirect"), userRole)
+      const roleRedirect = (userRole === "super_admin" || userRole === "hr_manager")
         ? "/dashboard"
         : "/profile"
 

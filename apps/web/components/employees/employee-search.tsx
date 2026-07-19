@@ -10,7 +10,16 @@ export function EmployeeSearch() {
   const searchParams = useSearchParams();
   const [value, setValue] = useState(searchParams.get("search") || "");
 
+  // Sync URL to input if URL changes externally
   useEffect(() => {
+    setValue(searchParams.get("search") || "");
+  }, [searchParams.get("search")]);
+
+  // Debounced update to URL
+  useEffect(() => {
+    if (value === (searchParams.get("search") || "")) {
+      return;
+    }
     const timeout = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
       if (value) {

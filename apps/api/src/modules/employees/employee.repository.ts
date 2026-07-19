@@ -1,20 +1,23 @@
 import db from "../../db";
 import { employees } from "../../db/schema/employees";
-import { eq, and, isNull, ne, or, ilike, desc, asc, count } from "drizzle-orm";
+import { eq, and, isNull, ne, or, ilike, desc, asc, count, sql } from "drizzle-orm";
 import { EmployeeListQuery } from "@empnexa/shared";
+import { ApiError } from "../../utils/api-error";
 
 type NewEmployee = typeof employees.$inferInsert;
+
+const HIERARCHY_LOCK_KEY = 987654321;
 
 export class EmployeeRepository {
   async findByEmail(email: string) {
     return db.query.employees.findFirst({
-      where: eq(employees.email, email),
+      where: and(eq(employees.email, email), isNull(employees.deletedAt)),
     });
   }
 
   async findByEmployeeCode(employeeCode: string) {
     return db.query.employees.findFirst({
-      where: eq(employees.employeeCode, employeeCode),
+      where: and(eq(employees.employeeCode, employeeCode), isNull(employees.deletedAt)),
     });
   }
 
@@ -37,37 +40,10 @@ export class EmployeeRepository {
     });
   }
 
-  async countReportees(id: string) {
-    const result = await db
-      .select({ count: count() })
-      .from(employees)
-      .where(
-        and(
-          eq(employees.managerId, id),
-          isNull(employees.deletedAt)
-        )
-      );
-    return result[0].count;
-  }
-
-  async countActiveSuperAdmins() {
-    const result = await db
-      .select({ count: count() })
-      .from(employees)
-      .where(
-        and(
-          eq(employees.role, "super_admin"),
-          eq(employees.status, "active"),
-          isNull(employees.deletedAt)
-        )
-      );
-    return result[0].count;
-  }
-
   async findManagerIdentityById(id: string) {
     return db.query.employees.findFirst({
       columns: { id: true, managerId: true, status: true, deletedAt: true },
-      where: eq(employees.id, id),
+      where: and(eq(employees.id, id), isNull(employees.deletedAt)),
     });
   }
 
@@ -76,30 +52,170 @@ export class EmployeeRepository {
     return employee;
   }
 
-  async update(id: string, data: Partial<NewEmployee>) {
-    const [employee] = await db
-      .update(employees)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(employees.id, id))
-      .returning();
-    return employee;
+  async updateEmployeeTransactionSafe(id: string, data: Partial<NewEmployee>) {
+    return await db.transaction(async (tx) => {
+      // If managerId is being modified, acquire hierarchy lock
+      if (data.managerId !== undefined) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${HIERARCHY_LOCK_KEY})`);
+      }
+
+      // Lock target employee
+      const [targetEmployee] = await tx
+        .select()
+        .from(employees)
+        .where(and(eq(employees.id, id), isNull(employees.deletedAt)))
+        .for("update");
+
+      if (!targetEmployee) {
+        throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
+      }
+
+      // Super Admin protection logic if role/status is changing
+      const removesActiveSuperAdmin =
+        targetEmployee.role === "super_admin" &&
+        targetEmployee.status === "active" &&
+        ((data.role !== undefined && data.role !== "super_admin") ||
+         (data.status !== undefined && data.status !== "active"));
+
+      if (removesActiveSuperAdmin) {
+        const activeSuperAdmins = await tx
+          .select({ id: employees.id })
+          .from(employees)
+          .where(
+            and(
+              eq(employees.role, "super_admin"),
+              eq(employees.status, "active"),
+              isNull(employees.deletedAt)
+            )
+          )
+          .for("update");
+
+        if (activeSuperAdmins.length <= 1 && activeSuperAdmins[0]?.id === id) {
+          throw new ApiError(409, "Cannot demote or deactivate the last active Super Admin", "LAST_ACTIVE_SUPER_ADMIN");
+        }
+      }
+
+      // Manager validation
+      if (data.managerId) {
+        if (data.managerId === id) {
+          throw new ApiError(422, "Employee cannot manage themselves", "INVALID_MANAGER");
+        }
+
+        const [manager] = await tx
+          .select({ id: employees.id, status: employees.status })
+          .from(employees)
+          .where(and(eq(employees.id, data.managerId), isNull(employees.deletedAt)))
+          .for("update");
+
+        if (!manager) {
+          throw new ApiError(422, "Invalid manager ID", "INVALID_MANAGER");
+        }
+
+        if (manager.status !== "active") {
+          throw new ApiError(422, "Manager must be active", "INVALID_MANAGER");
+        }
+
+        // Recursive CTE to check for circular reporting
+        const cycleCheckQuery = sql`
+          WITH RECURSIVE manager_chain AS (
+            SELECT id, manager_id
+            FROM employees
+            WHERE id = ${data.managerId} AND deleted_at IS NULL
+            UNION ALL
+            SELECT e.id, e.manager_id
+            FROM employees e
+            INNER JOIN manager_chain mc ON e.id = mc.manager_id
+            WHERE e.deleted_at IS NULL
+          )
+          SELECT id FROM manager_chain WHERE id = ${id};
+        `;
+
+        const cycleResult = await tx.execute(cycleCheckQuery);
+        
+        if (cycleResult.length > 0) {
+          throw new ApiError(409, "Circular reporting structure detected", "CIRCULAR_REPORTING");
+        }
+      }
+
+      // Apply update
+      const [updatedEmployee] = await tx
+        .update(employees)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(employees.id, id))
+        .returning();
+
+      return updatedEmployee;
+    });
   }
 
   async softDelete(id: string) {
-    const [employee] = await db
-      .update(employees)
-      .set({
-        deletedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(employees.id, id))
-      .returning();
-    return employee;
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${HIERARCHY_LOCK_KEY})`);
+
+      // Lock employee to delete
+      const [targetEmployee] = await tx
+        .select()
+        .from(employees)
+        .where(and(eq(employees.id, id), isNull(employees.deletedAt)))
+        .for("update");
+
+      if (!targetEmployee) {
+        throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
+      }
+
+      // Check reportees
+      const reportees = await tx
+        .select({ id: employees.id })
+        .from(employees)
+        .where(
+          and(
+            eq(employees.managerId, id),
+            isNull(employees.deletedAt)
+          )
+        )
+        .for("update");
+
+      if (reportees.length > 0) {
+        throw new ApiError(409, "Reassign direct reportees before deleting this employee", "EMPLOYEE_HAS_REPORTEES");
+      }
+
+      const removesActiveSuperAdmin = 
+        targetEmployee.role === "super_admin" && 
+        targetEmployee.status === "active";
+
+      if (removesActiveSuperAdmin) {
+        const activeSuperAdmins = await tx
+          .select({ id: employees.id })
+          .from(employees)
+          .where(
+            and(
+              eq(employees.role, "super_admin"),
+              eq(employees.status, "active"),
+              isNull(employees.deletedAt)
+            )
+          )
+          .for("update");
+
+        if (activeSuperAdmins.length <= 1 && activeSuperAdmins[0]?.id === id) {
+          throw new ApiError(409, "Cannot remove the last active Super Admin", "LAST_ACTIVE_SUPER_ADMIN");
+        }
+      }
+
+      const [deletedEmployee] = await tx
+        .update(employees)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(employees.id, id))
+        .returning();
+
+      return deletedEmployee;
+    });
   }
 
   async getPaginated(query: EmployeeListQuery) {
     const { page, limit, search, department, designation, status, role, managerId, sortBy, sortOrder } = query;
-    const offset = (page - 1) * limit;
 
     const filters = [isNull(employees.deletedAt)];
 
@@ -154,23 +270,24 @@ export class EmployeeRepository {
       updatedAt: employees.updatedAt,
     };
 
-    const [data, totalCountResult] = await Promise.all([
-      db.select(employeeListSelection).from(employees).where(whereClause).orderBy(orderByClause).limit(limit).offset(offset),
-      db.select({ count: count() }).from(employees).where(whereClause)
-    ]);
-
+    const totalCountResult = await db.select({ count: count() }).from(employees).where(whereClause);
     const total = totalCountResult[0].count;
-    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const totalPages = total === 0 ? 1 : Math.ceil(total / limit);
+    const normalizedPage = Math.min(Math.max(page, 1), totalPages);
+    const offset = (normalizedPage - 1) * limit;
+
+    const data = await db.select(employeeListSelection).from(employees).where(whereClause).orderBy(orderByClause).limit(limit).offset(offset);
 
     return {
       employees: data,
       pagination: {
-        page,
+        page: normalizedPage,
         limit,
         total,
         totalPages,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1,
+        hasNextPage: normalizedPage < totalPages,
+        hasPreviousPage: normalizedPage > 1,
       }
     };
   }
@@ -208,68 +325,6 @@ export class EmployeeRepository {
         status: true,
       },
       orderBy: [asc(employees.name)],
-    });
-  }
-
-  async updateWithSuperAdminCheck(id: string, data: Partial<NewEmployee>) {
-    return await db.transaction(async (tx) => {
-      const activeSuperAdmins = await tx
-        .select({ id: employees.id })
-        .from(employees)
-        .where(
-          and(
-            eq(employees.role, "super_admin"),
-            eq(employees.status, "active"),
-            isNull(employees.deletedAt)
-          )
-        )
-        .for("update");
-
-      if (activeSuperAdmins.length <= 1) {
-        const isOnlyAdmin = activeSuperAdmins[0]?.id === id;
-        if (isOnlyAdmin) {
-          throw new Error("LAST_ACTIVE_SUPER_ADMIN");
-        }
-      }
-
-      const [updatedEmployee] = await tx
-        .update(employees)
-        .set({ ...data, updatedAt: new Date() })
-        .where(eq(employees.id, id))
-        .returning();
-
-      return updatedEmployee;
-    });
-  }
-
-  async softDeleteWithSuperAdminCheck(id: string) {
-    return await db.transaction(async (tx) => {
-      const activeSuperAdmins = await tx
-        .select({ id: employees.id })
-        .from(employees)
-        .where(
-          and(
-            eq(employees.role, "super_admin"),
-            eq(employees.status, "active"),
-            isNull(employees.deletedAt)
-          )
-        )
-        .for("update");
-
-      if (activeSuperAdmins.length <= 1) {
-        const isOnlyAdmin = activeSuperAdmins[0]?.id === id;
-        if (isOnlyAdmin) {
-          throw new Error("LAST_ACTIVE_SUPER_ADMIN");
-        }
-      }
-
-      const [deletedEmployee] = await tx
-        .update(employees)
-        .set({ deletedAt: new Date(), updatedAt: new Date() })
-        .where(eq(employees.id, id))
-        .returning();
-
-      return deletedEmployee;
     });
   }
 }
