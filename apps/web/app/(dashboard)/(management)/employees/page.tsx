@@ -11,23 +11,24 @@ import { redirect } from "next/navigation";
 export default async function EmployeesPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
+  const resolvedSearchParams = await searchParams;
   const user = await getCurrentUserCached();
   if (!user || user.role === "employee") {
     redirect("/unauthorized");
   }
 
   const query = {
-    page: searchParams.page ? parseInt(searchParams.page, 10) : 1,
-    limit: searchParams.limit ? parseInt(searchParams.limit, 10) : 10,
-    search: searchParams.search,
-    department: searchParams.department,
-    designation: searchParams.designation,
-    status: searchParams.status,
-    role: searchParams.role,
-    sortBy: searchParams.sortBy,
-    sortOrder: searchParams.sortOrder,
+    page: resolvedSearchParams.page ? parseInt(resolvedSearchParams.page, 10) : 1,
+    limit: resolvedSearchParams.limit ? parseInt(resolvedSearchParams.limit, 10) : 10,
+    search: resolvedSearchParams.search,
+    department: resolvedSearchParams.department,
+    designation: resolvedSearchParams.designation,
+    status: resolvedSearchParams.status,
+    role: resolvedSearchParams.role,
+    sortBy: resolvedSearchParams.sortBy,
+    sortOrder: resolvedSearchParams.sortOrder,
   };
 
   const res = await getEmployeesServer(query);

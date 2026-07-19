@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "@/components/ui/dropdown-menu";
 import { EmployeeDto } from "@/features/employees/employee.api";
 import { UserRole } from "@empnexa/shared";
 
@@ -26,7 +26,9 @@ export function EmployeeActions({ employee, currentUserRole, onDelete }: Employe
         <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        </DropdownMenuGroup>
         
         <DropdownMenuItem onClick={() => router.push(`/employees/${employee.id}`)}>
           <Eye className="mr-2 h-4 w-4" /> View Details
