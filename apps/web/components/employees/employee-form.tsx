@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { createEmployeeSchema, CreateEmployeeInput, UpdateEmployeeInput, UserRole } from "@empnexa/shared";
+import { 
+  createEmployeeSchema, 
+  updateEmployeeSchema,
+  CreateEmployeeInput, 
+  UpdateEmployeeInput, 
+  UserRole 
+} from "@empnexa/shared";
 import { employeeApi, EmployeeDto } from "@/features/employees/employee.api";
 
 import { Button } from "@/components/ui/button";
@@ -22,29 +28,32 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { PasswordInput } from "../auth/password-input";
 
-interface EmployeeFormProps {
-  initialData?: EmployeeDto;
+type EmployeeFormProps = {
   currentUserRole: UserRole;
-}
+} & (
+  | { mode: "create"; employee?: never }
+  | { mode: "edit"; employee: EmployeeDto }
+);
 
-export function EmployeeForm({ initialData, currentUserRole }: EmployeeFormProps) {
+export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const isEditing = !!initialData;
+  const [managers, setManagers] = useState<EmployeeDto[]>([]);
+  const isEditing = mode === "edit";
 
-  const defaultValues: Partial<CreateEmployeeInput> = initialData ? {
-    name: initialData.name,
-    email: initialData.email,
-    employeeCode: initialData.employeeCode,
-    phone: initialData.phone,
-    department: initialData.department,
-    designation: initialData.designation,
-    salary: initialData.salary || 0,
-    status: initialData.status as any,
-    role: initialData.role as any,
-    joiningDate: initialData.joiningDate,
-    profileImageUrl: initialData.profileImageUrl || undefined,
-    managerId: initialData.managerId || undefined,
+  const defaultValues: any = isEditing ? {
+    name: employee.name,
+    email: employee.email,
+    employeeCode: employee.employeeCode,
+    phone: employee.phone,
+    department: employee.department,
+    designation: employee.designation,
+    salary: employee.salary || 0,
+    status: employee.status,
+    role: employee.role,
+    joiningDate: employee.joiningDate,
+    profileImageUrl: employee.profileImageUrl || "",
+    managerId: employee.managerId || "",
   } : {
     name: "",
     email: "",
@@ -57,29 +66,52 @@ export function EmployeeForm({ initialData, currentUserRole }: EmployeeFormProps
     status: "active",
     role: "employee",
     joiningDate: new Date().toISOString().split("T")[0],
+    profileImageUrl: "",
+    managerId: "",
   };
 
-  const form = useForm<CreateEmployeeInput>({
-    resolver: zodResolver(createEmployeeSchema) as any,
-    defaultValues: defaultValues as any,
+  const form = useForm<any>({
+    resolver: zodResolver(isEditing ? updateEmployeeSchema : createEmployeeSchema) as any,
+    defaultValues,
   });
 
-  const onSubmit = async (data: CreateEmployeeInput) => {
+  useEffect(() => {
+    async function fetchManagers() {
+      try {
+        // Fetch users who could be managers (super_admin, hr_manager). 
+        // We'll just fetch all active employees and filter locally to simplify.
+        // In a huge org, you'd want a specific endpoint or query parameters.
+        const res = await employeeApi.list({ page: 1, limit: 1000, sortBy: "createdAt", sortOrder: "desc", status: "active" as any });
+        if (res.data) {
+          let potentialManagers = res.data.employees.filter(emp => emp.role !== "employee");
+          
+          if (isEditing) {
+            potentialManagers = potentialManagers.filter(emp => emp.id !== employee.id);
+          }
+          setManagers(potentialManagers);
+        }
+      } catch (error) {
+        console.error("Failed to fetch managers", error);
+      }
+    }
+    
+    fetchManagers();
+  }, [isEditing, employee?.id]);
+
+  const onSubmit = async (data: any) => {
     setIsLoading(true);
     try {
       if (isEditing) {
-        // Exclude password and un-editable fields for edit
-        const { password, employeeCode, email, ...updateData } = data;
+        const { password, employeeCode, email, ...updateData } = data as any;
         
-        // Only include email/code if they actually changed (or let backend handle it, but updateSchema omits password)
         const payload: UpdateEmployeeInput = { ...updateData };
-        if (email !== initialData.email) payload.email = email;
-        if (employeeCode !== initialData.employeeCode) payload.employeeCode = employeeCode;
+        if (email !== employee.email) payload.email = email;
+        if (employeeCode !== employee.employeeCode) payload.employeeCode = employeeCode;
         
-        await employeeApi.update(initialData.id, payload);
+        await employeeApi.update(employee.id, payload);
         toast.success("Employee updated successfully");
       } else {
-        await employeeApi.create(data);
+        await employeeApi.create(data as CreateEmployeeInput);
         toast.success("Employee created successfully");
       }
       router.push("/employees");
@@ -273,8 +305,26 @@ export function EmployeeForm({ initialData, currentUserRole }: EmployeeFormProps
             name="managerId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Manager ID (Optional)</FormLabel>
-                <FormControl><Input placeholder="UUID of manager" disabled={isLoading} value={field.value || ""} onChange={field.onChange} /></FormControl>
+                <FormLabel>Manager (Optional)</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  value={field.value || "none"} 
+                  disabled={isLoading}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a manager" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {managers.map(manager => (
+                      <SelectItem key={manager.id} value={manager.id}>
+                        {manager.name} ({manager.employeeCode})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

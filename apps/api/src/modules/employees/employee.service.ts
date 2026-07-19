@@ -3,6 +3,7 @@ import { ApiError } from "../../utils/api-error";
 import { CreateEmployeeInput, UpdateEmployeeInput, EmployeeListQuery, UserRole } from "@empnexa/shared";
 import { hashPassword } from "../../utils/password";
 import { toEmployeeDto } from "./employee.mapper";
+import { mapDatabaseError } from "../../utils/database-error";
 
 export class EmployeeService {
   private repository = new EmployeeRepository();
@@ -20,107 +21,125 @@ export class EmployeeService {
   async getById(id: string, actorRole: UserRole) {
     const employee = await this.repository.findById(id);
     if (!employee) {
-      throw new ApiError(404, "Employee not found");
+      throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
     }
 
     const includeSalary = actorRole === "super_admin" || actorRole === "hr_manager";
     return toEmployeeDto(employee as any, includeSalary);
   }
 
-  async create(input: CreateEmployeeInput) {
-    // Check email uniqueness
-    const existingEmail = await this.repository.findByEmail(input.email);
-    if (existingEmail) {
-      throw new ApiError(409, "Email already exists", "EMAIL_ALREADY_EXISTS");
+  async validateManagerAssignment(employeeId: string, proposedManagerId: string | null) {
+    if (!proposedManagerId) {
+      return;
     }
 
-    // Check employee code uniqueness
-    const existingCode = await this.repository.findByEmployeeCode(input.employeeCode);
-    if (existingCode) {
-      throw new ApiError(409, "Employee code already exists", "EMPLOYEE_CODE_ALREADY_EXISTS");
+    if (proposedManagerId === employeeId) {
+      throw new ApiError(422, "Employee cannot manage themselves", "INVALID_MANAGER");
     }
 
-    // Validate manager if provided
-    if (input.managerId) {
-      const manager = await this.repository.findById(input.managerId);
-      if (!manager) {
-        throw new ApiError(422, "Invalid manager ID", "INVALID_MANAGER");
+    let currentManagerId: string | null = proposedManagerId;
+    const visited = new Set<string>();
+
+    while (currentManagerId) {
+      if (currentManagerId === employeeId) {
+        throw new ApiError(409, "Circular reporting structure detected", "CIRCULAR_REPORTING");
+      }
+      if (visited.has(currentManagerId)) {
+        throw new ApiError(409, "Corrupted hierarchy detected", "CIRCULAR_REPORTING");
+      }
+      visited.add(currentManagerId);
+
+      const manager = await this.repository.findManagerIdentityById(currentManagerId);
+      if (!manager || manager.deletedAt) {
+        throw new ApiError(422, "Invalid manager ID or manager is deleted", "INVALID_MANAGER");
       }
       if (manager.status !== "active") {
         throw new ApiError(422, "Manager must be active", "INVALID_MANAGER");
       }
+
+      currentManagerId = manager.managerId;
     }
+  }
 
-    const hashedPassword = await hashPassword(input.password);
-    const salaryInPaise = Math.round(input.salary * 100);
+  async create(input: CreateEmployeeInput) {
+    try {
+      // Validate manager if provided
+      if (input.managerId) {
+        // use a fake id that will never match a real manager ID for cycle check on creation
+        await this.validateManagerAssignment("NEW_EMPLOYEE", input.managerId);
+      }
 
-    const { password, salary, ...restInput } = input;
+      const hashedPassword = await hashPassword(input.password);
+      const salaryInPaise = Math.round(input.salary * 100);
 
-    const newEmployee = await this.repository.create({
-      ...restInput,
-      passwordHash: hashedPassword,
-      salaryInPaise,
-      // Default dates
-      joiningDate: input.joiningDate,
-    } as any);
+      const { password, salary, ...restInput } = input;
 
-    return toEmployeeDto(newEmployee as any, true);
+      const newEmployee = await this.repository.create({
+        ...restInput,
+        passwordHash: hashedPassword,
+        salaryInPaise,
+        joiningDate: input.joiningDate,
+      } as any);
+
+      return toEmployeeDto(newEmployee as any, true);
+    } catch (error: any) {
+      const dbError = mapDatabaseError(error);
+      if (dbError) {
+        throw new ApiError(409, "Database conflict", dbError);
+      }
+      throw error;
+    }
   }
 
   async update(id: string, input: UpdateEmployeeInput, actorRole: UserRole) {
-    const employee = await this.repository.findById(id);
-    if (!employee) {
-      throw new ApiError(404, "Employee not found");
-    }
-
-    // Uniqueness checks if updating unique fields
-    if (input.email && input.email !== employee.email) {
-      const existingEmail = await this.repository.findByEmail(input.email);
-      if (existingEmail) {
-        throw new ApiError(409, "Email already exists", "EMAIL_ALREADY_EXISTS");
+    try {
+      const employee = await this.repository.findById(id);
+      if (!employee) {
+        throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
       }
-    }
 
-    if (input.employeeCode && input.employeeCode !== employee.employeeCode) {
-      const existingCode = await this.repository.findByEmployeeCode(input.employeeCode);
-      if (existingCode) {
-        throw new ApiError(409, "Employee code already exists", "EMPLOYEE_CODE_ALREADY_EXISTS");
+      // Check last active Super Admin status/role change
+      if (employee.role === "super_admin" && (input.role && input.role !== "super_admin" || input.status && input.status !== "active")) {
+        const activeSuperAdmins = await this.repository.countActiveSuperAdmins();
+        if (activeSuperAdmins <= 1) {
+          throw new ApiError(409, "Cannot demote or deactivate the last active Super Admin", "LAST_ACTIVE_SUPER_ADMIN");
+        }
       }
-    }
 
-    // Validate manager if provided
-    if (input.managerId !== undefined && input.managerId !== null) {
-      if (input.managerId === id) {
-        throw new ApiError(422, "Employee cannot manage themselves", "INVALID_MANAGER");
+      // Validate manager if provided
+      if (input.managerId !== undefined) {
+        await this.validateManagerAssignment(id, input.managerId);
       }
-      const manager = await this.repository.findById(input.managerId);
-      if (!manager) {
-        throw new ApiError(422, "Invalid manager ID", "INVALID_MANAGER");
+
+      const updateData: any = { ...input };
+
+      if (input.salary !== undefined) {
+        updateData.salaryInPaise = Math.round(input.salary * 100);
+        delete updateData.salary;
       }
+
+      const updatedEmployee = await this.repository.update(id, updateData);
+      const includeSalary = actorRole === "super_admin" || actorRole === "hr_manager";
+      return toEmployeeDto(updatedEmployee as any, includeSalary);
+    } catch (error: any) {
+      const dbError = mapDatabaseError(error);
+      if (dbError) {
+        throw new ApiError(409, "Database conflict", dbError);
+      }
+      throw error;
     }
-
-    const updateData: any = { ...input };
-
-    if (input.salary !== undefined) {
-      updateData.salaryInPaise = Math.round(input.salary * 100);
-      delete updateData.salary;
-    }
-
-    const updatedEmployee = await this.repository.update(id, updateData);
-    const includeSalary = actorRole === "super_admin" || actorRole === "hr_manager";
-    return toEmployeeDto(updatedEmployee as any, includeSalary);
   }
 
   async softDelete(id: string) {
     const employee = await this.repository.findById(id);
     if (!employee) {
-      throw new ApiError(404, "Employee not found");
+      throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
     }
 
     if (employee.role === "super_admin") {
       const activeSuperAdmins = await this.repository.countActiveSuperAdmins();
       if (activeSuperAdmins <= 1) {
-        throw new ApiError(403, "Cannot delete the last active Super Admin", "LAST_SUPER_ADMIN");
+        throw new ApiError(409, "Cannot delete the last active Super Admin", "LAST_ACTIVE_SUPER_ADMIN");
       }
     }
 

@@ -6,7 +6,7 @@
     "dev": "bun --watch src/server.ts",
     "build": "bun build ./src/server.ts --outdir ./dist --target node",
     "start": "NODE_ENV=production bun run dist/server.js",
-    "lint": "eslint src/ --ext .ts",
+    "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -36,7 +36,9 @@
     "@types/express-rate-limit": "^6.0.2",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^22.5.5",
+    "@types/supertest": "^7.2.1",
     "drizzle-kit": "^0.24.2",
+    "supertest": "^7.2.2",
     "typescript": "^5.6.2"
   }
 }

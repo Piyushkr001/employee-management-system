@@ -64,6 +64,13 @@ export class EmployeeRepository {
     return result[0].count;
   }
 
+  async findManagerIdentityById(id: string) {
+    return db.query.employees.findFirst({
+      columns: { id: true, managerId: true, status: true, deletedAt: true },
+      where: eq(employees.id, id),
+    });
+  }
+
   async create(data: NewEmployee) {
     const [employee] = await db.insert(employees).values(data).returning();
     return employee;
@@ -97,14 +104,16 @@ export class EmployeeRepository {
     const filters = [isNull(employees.deletedAt)];
 
     if (search) {
-      filters.push(
-        or(
-          ilike(employees.name, `%${search}%`),
-          ilike(employees.email, `%${search}%`),
-          ilike(employees.employeeCode, `%${search}%`),
-          ilike(employees.phone, `%${search}%`)
-        )
+      const searchCondition = or(
+        ilike(employees.name, `%${search}%`),
+        ilike(employees.email, `%${search}%`),
+        ilike(employees.employeeCode, `%${search}%`),
+        ilike(employees.phone, `%${search}%`)
       );
+
+      if (searchCondition) {
+        filters.push(searchCondition);
+      }
     }
     if (department) filters.push(eq(employees.department, department));
     if (designation) filters.push(eq(employees.designation, designation));
@@ -133,7 +142,7 @@ export class EmployeeRepository {
     ]);
 
     const total = totalCountResult[0].count;
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
 
     return {
       employees: data,

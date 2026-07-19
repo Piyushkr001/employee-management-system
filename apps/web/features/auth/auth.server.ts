@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { AuthenticatedUserDto, ApiResponse } from "@empnexa/shared";
+import { cache } from "react";
 
 export async function getCurrentUserServer(): Promise<AuthenticatedUserDto | null> {
   const cookieStore = await cookies();
@@ -22,7 +23,7 @@ export async function getCurrentUserServer(): Promise<AuthenticatedUserDto | nul
 
     if (!res.ok) {
       if (res.status >= 500) {
-        console.error(`[getCurrentUserServer] Backend error: ${res.status}`);
+        throw new Error("Backend service is unavailable");
       }
       return null;
     }
@@ -30,7 +31,15 @@ export async function getCurrentUserServer(): Promise<AuthenticatedUserDto | nul
     const data: ApiResponse<{ user: AuthenticatedUserDto }> = await res.json();
     return data.data?.user || null;
   } catch (error) {
-    console.error("[getCurrentUserServer] Fetch failed:", error);
-    return null;
+    // If it's a backend unavailable error, we throw it to trigger the Error boundary
+    // rather than redirecting to login.
+    if (error instanceof Error && error.message === "Backend service is unavailable") {
+      throw error;
+    }
+    
+    // For fetch failures (network error connecting to internal service)
+    throw new Error("Backend service is unreachable");
   }
 }
+
+export const getCurrentUserCached = cache(getCurrentUserServer);

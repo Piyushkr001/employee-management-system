@@ -101,13 +101,15 @@ export const createEmployeeSchema = z.object({
     ])
     .default("employee"),
 
-  managerId: z.string().uuid().nullable().optional(),
+  managerId: z.preprocess(
+    (val) => (val === "" || val === undefined || val === "none" ? null : val),
+    z.string().uuid().nullable().optional()
+  ),
 
-  profileImageUrl: z
-    .string()
-    .url()
-    .nullable()
-    .optional(),
+  profileImageUrl: z.preprocess(
+    (val) => (val === "" || val === undefined ? null : val),
+    z.string().url().nullable().optional()
+  ),
 });
 
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;

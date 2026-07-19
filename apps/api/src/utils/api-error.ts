@@ -1,9 +1,12 @@
 export class ApiError extends Error {
-  statusCode: number;
-
-  constructor(statusCode: number, message: string) {
+  constructor(
+    public readonly statusCode: number,
+    message: string,
+    public readonly code?: string,
+    public readonly fieldErrors?: Record<string, string[]>,
+  ) {
     super(message);
-    this.statusCode = statusCode;
-    Error.captureStackTrace(this, this.constructor);
+    this.name = "ApiError";
+    Error.captureStackTrace(this, ApiError);
   }
 }

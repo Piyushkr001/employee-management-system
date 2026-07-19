@@ -68,7 +68,13 @@ export function EmployeeTable({ employees, currentUserRole, pagination }: Employ
                     <td className="px-4 py-3">{employee.joiningDate}</td>
                     {currentUserRole !== "employee" && (
                       <td className="px-4 py-3">
-                        {employee.salary ? `₹${employee.salary.toLocaleString()}` : "-"}
+                        {employee.salary !== undefined && employee.salary !== null
+                          ? new Intl.NumberFormat("en-IN", {
+                              style: "currency",
+                              currency: "INR",
+                              maximumFractionDigits: 0,
+                            }).format(employee.salary)
+                          : "-"}
                       </td>
                     )}
                     <td className="px-4 py-3 text-right">

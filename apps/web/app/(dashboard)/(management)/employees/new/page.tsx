@@ -1,9 +1,9 @@
-import { getCurrentUserServer } from "@/features/auth/auth.server";
+import { getCurrentUserCached } from "@/features/auth/auth.server";
 import { EmployeeForm } from "@/components/employees/employee-form";
 import { redirect } from "next/navigation";
 
 export default async function NewEmployeePage() {
-  const user = await getCurrentUserServer();
+  const user = await getCurrentUserCached();
   if (!user || user.role === "employee") {
     redirect("/unauthorized");
   }
@@ -15,7 +15,7 @@ export default async function NewEmployeePage() {
         <p className="text-muted-foreground">Fill out the form below to create a new employee profile.</p>
       </div>
 
-      <EmployeeForm currentUserRole={user.role} />
+      <EmployeeForm mode="create" currentUserRole={user.role} />
     </div>
   );
 }

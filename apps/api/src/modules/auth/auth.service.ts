@@ -14,18 +14,18 @@ export class AuthService {
 
     // 2. Return generic error for not found
     if (!employee) {
-      throw new ApiError(401, "Invalid email or password");
+      throw new ApiError(401, "Invalid email or password", "INVALID_CREDENTIALS");
     }
 
     // 3. Reject inactive employees
     if (employee.status !== "active") {
-      throw new ApiError(403, "Account is inactive");
+      throw new ApiError(403, "Account is inactive", "ACCOUNT_INACTIVE");
     }
 
     // 4. Compare password
     const isPasswordValid = await comparePassword(input.password, employee.passwordHash);
     if (!isPasswordValid) {
-      throw new ApiError(401, "Invalid email or password");
+      throw new ApiError(401, "Invalid email or password", "INVALID_CREDENTIALS");
     }
 
     // 5. Generate JWT
@@ -50,11 +50,11 @@ export class AuthService {
     const employee = await this.repository.findFullEmployeeById(userId);
 
     if (!employee) {
-      throw new ApiError(401, "User not found");
+      throw new ApiError(401, "User not found", "USER_NOT_FOUND");
     }
 
     if (employee.status !== "active") {
-      throw new ApiError(403, "Account is inactive");
+      throw new ApiError(403, "Account is inactive", "ACCOUNT_INACTIVE");
     }
 
     return toAuthenticatedUserDto(employee);

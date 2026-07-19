@@ -29,7 +29,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<UpdateEmployeeInput>({
+  const form = useForm<any>({
     resolver: zodResolver(updateEmployeeSchema) as any,
     defaultValues: {
       phone: initialData.phone || "",
@@ -37,13 +37,13 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     },
   });
 
-  const onSubmit = async (data: UpdateEmployeeInput) => {
+  const onSubmit = async (data: any) => {
     setIsLoading(true);
     try {
       // The backend API expects a partial input and will only update allowed fields (phone, profileImageUrl)
       await employeeApi.update(initialData.id, {
         phone: data.phone,
-        profileImageUrl: data.profileImageUrl || undefined,
+        profileImageUrl: data.profileImageUrl, // schema preprocessor handles empty string to null
       });
       toast.success("Profile updated successfully");
       router.refresh();

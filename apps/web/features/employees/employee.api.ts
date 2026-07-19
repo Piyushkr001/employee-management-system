@@ -13,6 +13,18 @@ export type EmployeeDto = Omit<AuthenticatedUserDto, "id"> & {
   };
 };
 
+export type EmployeePaginatedResponse = {
+  employees: EmployeeDto[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+};
+
 export const employeeApi = {
   list: async (query: EmployeeListQuery) => {
     const searchParams = new URLSearchParams();

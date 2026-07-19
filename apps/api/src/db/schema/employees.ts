@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  AnyPgColumn,
   check,
   date,
   index,
@@ -68,7 +69,7 @@ export const employees = pgTable(
       .notNull(),
 
     managerId: uuid("manager_id").references(
-      (): typeof employees.id => employees.id,
+      (): AnyPgColumn => employees.id,
     ),
 
     profileImageUrl: text("profile_image_url"),

@@ -32,12 +32,4 @@ export type AuthenticatedUserDto = {
   updatedAt: string;
 };
 
-export type ApiResponse<T = undefined> = {
-  success: boolean;
-  message: string;
-  data?: T;
-  error?: {
-    code?: string;
-    fieldErrors?: Record<string, string[]>;
-  };
-};
+
