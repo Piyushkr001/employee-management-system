@@ -13,7 +13,9 @@ import { ApiError } from "./utils/api-error";
 
 const app: Express = express();
 
-app.set("trust proxy", 1);
+if (env.TRUST_PROXY) {
+  app.set("trust proxy", 1);
+}
 
 // Rate Limiting
 const standardLimiter = rateLimit({

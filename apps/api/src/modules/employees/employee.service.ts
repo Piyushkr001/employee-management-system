@@ -39,17 +39,12 @@ export class EmployeeService {
 
       const { password, salary, ...restInput } = input;
 
-      const newEmployee = await this.repository.create({
+      const newEmployee = await this.repository.createEmployeeTransactionSafe({
         ...restInput,
         passwordHash: hashedPassword,
         salaryInPaise,
         joiningDate: input.joiningDate,
       } as any);
-
-      // if managerId is provided on creation, we can update it transaction-safely
-      if (input.managerId) {
-        await this.repository.updateEmployeeTransactionSafe(newEmployee.id, { managerId: input.managerId });
-      }
 
       return toEmployeeDto(newEmployee as any, true);
     } catch (error: any) {
@@ -62,7 +57,7 @@ export class EmployeeService {
     }
   }
 
-  async update(id: string, input: UpdateEmployeeInput, actorRole: UserRole) {
+  async update(id: string, input: UpdateEmployeeInput, actor: { id: string; role: UserRole }) {
     try {
       const updateData: any = { ...input };
 
@@ -71,9 +66,9 @@ export class EmployeeService {
         delete updateData.salary;
       }
 
-      const updatedEmployee = await this.repository.updateEmployeeTransactionSafe(id, updateData);
+      const updatedEmployee = await this.repository.updateEmployeeTransactionSafe(id, updateData, actor);
       
-      const includeSalary = actorRole === "super_admin" || actorRole === "hr_manager";
+      const includeSalary = actor.role === "super_admin" || actor.role === "hr_manager";
       return toEmployeeDto(updatedEmployee as any, includeSalary);
     } catch (error: any) {
       const dbError = mapDatabaseError(error);

@@ -61,7 +61,7 @@ export function ManagerSelect({ value, onChange, excludeEmployeeId, disabled, cu
     };
   }, [search, open, excludeEmployeeId]);
 
-  const selectedManager = managers.find((m) => m.id === value);
+  const selectedManager = managers.find((m) => m.id === value) || (currentManager?.id === value ? currentManager : null);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

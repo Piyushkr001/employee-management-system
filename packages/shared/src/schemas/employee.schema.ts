@@ -114,19 +114,22 @@ export const createEmployeeSchema = z.object({
 
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;
 
-export const updateEmployeeSchema = createEmployeeSchema.partial().extend({
-  // Override specific fields that shouldn't be partially updatable in the same way or
-  // add fields if necessary. 
-  // We strictly omit sensitive fields from even being processed via Omit if needed,
-  // but since createEmployeeSchema doesn't have passwordHash, deletedAt, etc., it's safe.
-}).omit({
-  // We do not want passwords updatable via the standard edit employee endpoint during this phase
+export const updateEmployeeSchema = createEmployeeSchema.partial().omit({
   password: true,
-  // Employee code is immutable
   employeeCode: true,
-});
+}).strict();
 
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;
+
+export const profileUpdateSchema = z.object({
+  phone: z.string().trim().min(7).max(20),
+  profileImageUrl: z.preprocess(
+    (val) => (val === "" || val === undefined ? null : val),
+    z.string().url().nullable().optional()
+  ),
+}).strict();
+
+export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 
 export type EmployeeStatus = "active" | "inactive";
 

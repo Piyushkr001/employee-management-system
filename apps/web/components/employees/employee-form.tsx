@@ -77,14 +77,24 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
     defaultValues,
   });
 
+  const { dirtyFields } = form.formState;
+
   const onSubmit = async (data: any) => {
     setIsLoading(true);
     try {
       if (isEditing) {
-        const { password, email, ...updateData } = data as any;
-        
-        const payload: UpdateEmployeeInput = { ...updateData };
-        if (email !== employee.email) payload.email = email;
+        const payload: Partial<UpdateEmployeeInput> = {};
+        Object.keys(dirtyFields).forEach(key => {
+          if (key !== "password" && key !== "employeeCode") {
+            payload[key as keyof UpdateEmployeeInput] = data[key];
+          }
+        });
+
+        if (Object.keys(payload).length === 0) {
+          toast.info("No changes to save");
+          setIsLoading(false);
+          return;
+        }
         
         await employeeApi.update(employee.id, payload);
         toast.success("Employee updated successfully");

@@ -1,12 +1,12 @@
 import db from "../../db";
 import { employees } from "../../db/schema/employees";
 import { eq, and, isNull, ne, or, ilike, desc, asc, count, sql } from "drizzle-orm";
-import { EmployeeListQuery } from "@empnexa/shared";
+import { EmployeeListQuery, UserRole } from "@empnexa/shared";
 import { ApiError } from "../../utils/api-error";
+import { EMPLOYEE_HIERARCHY_LOCK_KEY } from "./employee.constants";
+import { assertAllowedUpdateFields } from "./employee.authorization";
 
 type NewEmployee = typeof employees.$inferInsert;
-
-const HIERARCHY_LOCK_KEY = 987654321;
 
 export class EmployeeRepository {
   async findByEmail(email: string) {
@@ -47,16 +47,36 @@ export class EmployeeRepository {
     });
   }
 
-  async create(data: NewEmployee) {
-    const [employee] = await db.insert(employees).values(data).returning();
-    return employee;
+  async createEmployeeTransactionSafe(data: NewEmployee) {
+    return await db.transaction(async (tx) => {
+      if (data.managerId) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
+
+        const [manager] = await tx
+          .select({ id: employees.id, status: employees.status })
+          .from(employees)
+          .where(and(eq(employees.id, data.managerId), isNull(employees.deletedAt)))
+          .for("update");
+
+        if (!manager) {
+          throw new ApiError(422, "Selected manager does not exist", "INVALID_MANAGER");
+        }
+
+        if (manager.status !== "active") {
+          throw new ApiError(422, "Selected manager is inactive", "INVALID_MANAGER");
+        }
+      }
+
+      const [employee] = await tx.insert(employees).values(data).returning();
+      return employee;
+    });
   }
 
-  async updateEmployeeTransactionSafe(id: string, data: Partial<NewEmployee>) {
+  async updateEmployeeTransactionSafe(id: string, data: Partial<NewEmployee>, actor?: { id: string; role: UserRole }) {
     return await db.transaction(async (tx) => {
       // If managerId is being modified, acquire hierarchy lock
       if (data.managerId !== undefined) {
-        await tx.execute(sql`SELECT pg_advisory_xact_lock(${HIERARCHY_LOCK_KEY})`);
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
       }
 
       // Lock target employee
@@ -68,6 +88,19 @@ export class EmployeeRepository {
 
       if (!targetEmployee) {
         throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
+      }
+
+      if (actor) {
+        // Assert authorization contextually with latest DB state
+        assertAllowedUpdateFields(actor, targetEmployee as any, data as any);
+        
+        if (actor.role === "hr_manager" && targetEmployee.role === "super_admin") {
+          throw new ApiError(403, "Cannot modify Super Admin", "CANNOT_MODIFY_SUPER_ADMIN");
+        }
+        
+        if (actor.role === "employee" && actor.id !== targetEmployee.id) {
+          throw new ApiError(403, "Cannot modify another employee", "FORBIDDEN");
+        }
       }
 
       // Super Admin protection logic if role/status is changing
@@ -115,19 +148,29 @@ export class EmployeeRepository {
           throw new ApiError(422, "Manager must be active", "INVALID_MANAGER");
         }
 
-        // Recursive CTE to check for circular reporting
+        // Path-aware recursive CTE to check for circular reporting
         const cycleCheckQuery = sql`
           WITH RECURSIVE manager_chain AS (
-            SELECT id, manager_id
+            SELECT 
+              id, 
+              manager_id,
+              ARRAY[id] AS path,
+              false AS cycle_detected
             FROM employees
             WHERE id = ${data.managerId} AND deleted_at IS NULL
+            
             UNION ALL
-            SELECT e.id, e.manager_id
+            
+            SELECT 
+              e.id, 
+              e.manager_id,
+              mc.path || e.id,
+              e.id = ANY(mc.path)
             FROM employees e
             INNER JOIN manager_chain mc ON e.id = mc.manager_id
-            WHERE e.deleted_at IS NULL
+            WHERE e.deleted_at IS NULL AND mc.cycle_detected = false
           )
-          SELECT id FROM manager_chain WHERE id = ${id};
+          SELECT id, cycle_detected FROM manager_chain WHERE id = ${id} OR cycle_detected = true;
         `;
 
         const cycleResult = await tx.execute(cycleCheckQuery);
@@ -150,7 +193,7 @@ export class EmployeeRepository {
 
   async softDelete(id: string) {
     return await db.transaction(async (tx) => {
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(${HIERARCHY_LOCK_KEY})`);
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
 
       // Lock employee to delete
       const [targetEmployee] = await tx

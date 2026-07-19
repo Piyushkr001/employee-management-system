@@ -35,3 +35,6 @@ type ApiResponse<T = undefined> = {
 
 - Authentication uses HTTP-only cookies.
 - Cookie name is shared between frontend and backend via `AUTH_COOKIE_NAME` environment variable (defaults to `empnexa_token`).
+- `employeeCode` is strictly immutable after creation.
+- Hierarchy operations (assigning managers, soft deleting) are protected by a Postgres advisory transaction lock (`EMPLOYEE_HIERARCHY_LOCK_KEY`) to prevent concurrent circular reporting and race conditions.
+- Super Admin demotion/deactivation checks are protected via `FOR UPDATE` row-level locks ensuring at least one active Super Admin always exists.

@@ -108,7 +108,7 @@ export class EmployeeController {
         return next(new ApiError(400, "No allowed fields provided for update", "NO_FIELDS_UPDATED"));
       }
 
-      const employee = await this.service.update(params.id, allowedInput, actor.role);
+      const employee = await this.service.update(params.id, allowedInput, actor);
       sendResponse(res, 200, "Employee updated successfully", employee);
     } catch (error) {
       next(error);

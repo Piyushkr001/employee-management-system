@@ -26,11 +26,20 @@ export async function fetchApi<T>(
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
   const url = `${baseUrl.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
 
+  const isMutation = ["POST", "PUT", "DELETE", "PATCH"].includes(options?.method?.toUpperCase() || "GET");
+  const defaultHeaders: Record<string, string> = {
+    "Accept": "application/json",
+  };
+  
+  if (isMutation) {
+    defaultHeaders["Content-Type"] = "application/json";
+    defaultHeaders["X-EmpNexa-Request"] = "web";
+  }
+
   const response = await fetch(url, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
-      "X-EmpNexa-Request": "web",
+      ...defaultHeaders,
       ...options?.headers,
     },
     credentials: "include",

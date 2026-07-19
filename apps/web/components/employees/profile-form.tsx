@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { updateEmployeeSchema, UpdateEmployeeInput } from "@empnexa/shared";
+import { profileUpdateSchema, ProfileUpdateInput } from "@empnexa/shared";
 import { employeeApi } from "@/features/employees/employee.api";
 import { useRouter } from "next/navigation";
 
@@ -30,21 +30,30 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<any>({
-    resolver: zodResolver(updateEmployeeSchema) as any,
+    resolver: zodResolver(profileUpdateSchema) as any,
     defaultValues: {
       phone: initialData.phone || "",
       profileImageUrl: initialData.profileImageUrl || "",
     },
   });
+  
+  const { dirtyFields } = form.formState;
 
   const onSubmit = async (data: any) => {
     setIsLoading(true);
     try {
-      // The backend API expects a partial input and will only update allowed fields (phone, profileImageUrl)
-      await employeeApi.update(initialData.id, {
-        phone: data.phone,
-        profileImageUrl: data.profileImageUrl, // schema preprocessor handles empty string to null
+      const payload: Partial<ProfileUpdateInput> = {};
+      Object.keys(dirtyFields).forEach(key => {
+        payload[key as keyof ProfileUpdateInput] = data[key];
       });
+
+      if (Object.keys(payload).length === 0) {
+        toast.info("No changes to save");
+        setIsLoading(false);
+        return;
+      }
+      
+      await employeeApi.update(initialData.id, payload as any);
       toast.success("Profile updated successfully");
       router.refresh();
     } catch (error: any) {

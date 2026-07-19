@@ -11,7 +11,7 @@ async function seed() {
     const empPassword = await hashPassword("Employee@123");
 
     // 1. Create top level (Super Admin)
-    const superAdminRes = await db.insert(employees).values({
+    const superAdminData = {
       employeeCode: "EMP101",
       name: "Super Admin",
       email: "admin@empnexa.com",
@@ -21,13 +21,17 @@ async function seed() {
       designation: "Chief Executive",
       salaryInPaise: 15000000, 
       joiningDate: "2026-01-01",
-      status: "active",
-      role: "super_admin",
-    }).onConflictDoUpdate({ target: employees.email, set: { name: "Super Admin" } }).returning({ id: employees.id });
+      status: "active" as const,
+      role: "super_admin" as const,
+    };
+    const superAdminRes = await db.insert(employees).values(superAdminData).onConflictDoUpdate({ 
+      target: employees.email, 
+      set: { ...superAdminData, employeeCode: undefined, updatedAt: new Date() } 
+    }).returning({ id: employees.id });
     const superAdminId = superAdminRes[0].id;
 
     // 2. Create middle managers
-    const hrManagerRes = await db.insert(employees).values({
+    const hrManagerData = {
       employeeCode: "EMP102",
       name: "HR Manager",
       email: "hr@empnexa.com",
@@ -37,13 +41,17 @@ async function seed() {
       designation: "HR Director",
       salaryInPaise: 10000000, 
       joiningDate: "2026-01-15",
-      status: "active",
-      role: "hr_manager",
+      status: "active" as const,
+      role: "hr_manager" as const,
       managerId: superAdminId,
-    }).onConflictDoUpdate({ target: employees.email, set: { managerId: superAdminId } }).returning({ id: employees.id });
+    };
+    const hrManagerRes = await db.insert(employees).values(hrManagerData).onConflictDoUpdate({ 
+      target: employees.email, 
+      set: { ...hrManagerData, employeeCode: undefined, updatedAt: new Date() } 
+    }).returning({ id: employees.id });
     const hrManagerId = hrManagerRes[0].id;
 
-    const engLeadRes = await db.insert(employees).values({
+    const engLeadData = {
       employeeCode: "EMP103",
       name: "Engineering Lead",
       email: "englead@empnexa.com",
@@ -53,13 +61,17 @@ async function seed() {
       designation: "Engineering Lead",
       salaryInPaise: 12000000, 
       joiningDate: "2026-01-20",
-      status: "active",
-      role: "employee",
+      status: "active" as const,
+      role: "employee" as const,
       managerId: superAdminId,
-    }).onConflictDoUpdate({ target: employees.email, set: { managerId: superAdminId } }).returning({ id: employees.id });
+    };
+    const engLeadRes = await db.insert(employees).values(engLeadData).onConflictDoUpdate({ 
+      target: employees.email, 
+      set: { ...engLeadData, employeeCode: undefined, updatedAt: new Date() } 
+    }).returning({ id: employees.id });
     const engLeadId = engLeadRes[0].id;
 
-    const prodManagerRes = await db.insert(employees).values({
+    const prodManagerData = {
       employeeCode: "EMP104",
       name: "Product Manager",
       email: "pm@empnexa.com",
@@ -69,10 +81,14 @@ async function seed() {
       designation: "Product Manager",
       salaryInPaise: 11000000, 
       joiningDate: "2026-01-25",
-      status: "active",
-      role: "employee",
+      status: "active" as const,
+      role: "employee" as const,
       managerId: superAdminId,
-    }).onConflictDoUpdate({ target: employees.email, set: { managerId: superAdminId } }).returning({ id: employees.id });
+    };
+    const prodManagerRes = await db.insert(employees).values(prodManagerData).onConflictDoUpdate({ 
+      target: employees.email, 
+      set: { ...prodManagerData, employeeCode: undefined, updatedAt: new Date() } 
+    }).returning({ id: employees.id });
     const prodManagerId = prodManagerRes[0].id;
 
     const defaultPassword = await hashPassword("Welcome@123");
@@ -89,7 +105,7 @@ async function seed() {
 
     console.log("Seeding reportees...");
     for (const emp of reportees) {
-      await db.insert(employees).values({
+      const empData = {
         employeeCode: emp.employeeCode,
         name: emp.name,
         email: emp.email,
@@ -99,12 +115,13 @@ async function seed() {
         designation: emp.designation,
         salaryInPaise: 6000000,
         joiningDate: "2026-03-01",
-        status: "active",
+        status: "active" as const,
         role: emp.role,
         managerId: emp.managerId,
-      }).onConflictDoUpdate({
+      };
+      await db.insert(employees).values(empData).onConflictDoUpdate({
         target: employees.email,
-        set: { managerId: emp.managerId }
+        set: { ...empData, employeeCode: undefined, updatedAt: new Date() }
       });
     }
 

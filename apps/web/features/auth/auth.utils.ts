@@ -16,12 +16,7 @@ export function getSafeRedirect(
   }
 
   // Validate safe paths
-  const isValidPath = 
-    value === "/dashboard" ||
-    value === "/organization" ||
-    value === "/profile" ||
-    value === "/employees" ||
-    /^\/employees\/[a-zA-Z0-9-]+$/.test(value);
+  const isValidPath = value.startsWith("/") && !value.startsWith("//");
 
   if (!isValidPath) return null;
 

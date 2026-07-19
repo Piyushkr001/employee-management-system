@@ -28,3 +28,4 @@ Standard access for regular staff.
 - `employeeCode` is immutable after creation and cannot be updated by any role.
 - Attempts to update forbidden fields explicitly return `403 Forbidden` rather than silently ignoring the update (e.g. HR trying to assign a Super Admin role, or Employee trying to update their own salary).
 - Password hashes and other sensitive server-side fields are never exposed in the employee list selection payload.
+- **Race Condition Protection**: Updates are re-authorized contextually *inside* the database transaction with `FOR UPDATE` locks, ensuring changes (like HR trying to demote a newly-promoted Super Admin) are caught based on the absolute latest database state.
