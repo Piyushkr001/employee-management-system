@@ -30,6 +30,7 @@ export async function fetchApi<T>(
     ...options,
     headers: {
       "Content-Type": "application/json",
+      "X-EmpNexa-Request": "web",
       ...options?.headers,
     },
     credentials: "include",

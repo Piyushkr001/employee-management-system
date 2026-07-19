@@ -29,6 +29,12 @@ router.post(
 );
 
 router.get(
+  "/manager-options",
+  authorize(USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER),
+  asyncHandler(controller.managerOptions.bind(controller))
+);
+
+router.get(
   "/:id",
   validate(employeeIdParamsSchema, "params"),
   asyncHandler(controller.getById.bind(controller))

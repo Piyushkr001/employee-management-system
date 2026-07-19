@@ -25,6 +25,28 @@ export class EmployeeController {
     }
   };
 
+  managerOptions = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const actor = req.user!;
+      if (!canListEmployees(actor)) {
+        return next(new ApiError(403, "You do not have permission to view manager options", "FORBIDDEN"));
+      }
+
+      const { search, excludeEmployeeId, limit } = req.query as { search?: string; excludeEmployeeId?: string; limit?: string };
+      const parsedLimit = limit ? parseInt(limit, 10) : 100;
+      
+      const options = await this.service.getManagerOptions({
+        search,
+        excludeEmployeeId,
+        limit: isNaN(parsedLimit) ? 100 : parsedLimit
+      });
+
+      sendResponse(res, 200, "Manager options retrieved successfully", { managers: options });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const actor = req.user!;

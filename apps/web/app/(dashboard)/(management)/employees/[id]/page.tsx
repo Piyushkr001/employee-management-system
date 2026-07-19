@@ -12,8 +12,9 @@ import { EmployeeDto } from "@/features/employees/employee.api";
 export default async function EmployeeDetailsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const resolvedParams = await params;
   const user = await getCurrentUserCached();
   if (!user || user.role === "employee") {
     redirect("/unauthorized");
@@ -22,7 +23,7 @@ export default async function EmployeeDetailsPage({
   let employee: EmployeeDto;
 
   try {
-    const res = await getEmployeeByIdServer(params.id);
+    const res = await getEmployeeByIdServer(resolvedParams.id);
     if (!res.data) {
       notFound();
     }

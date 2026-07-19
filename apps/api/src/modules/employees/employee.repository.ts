@@ -156,4 +156,102 @@ export class EmployeeRepository {
       }
     };
   }
+
+  async getManagerOptions(query: { search?: string; excludeEmployeeId?: string; limit?: number }) {
+    const { search, excludeEmployeeId, limit = 100 } = query;
+    const filters = [
+      isNull(employees.deletedAt),
+      eq(employees.status, "active")
+    ];
+
+    if (excludeEmployeeId) {
+      filters.push(ne(employees.id, excludeEmployeeId));
+    }
+
+    if (search) {
+      const searchCondition = or(
+        ilike(employees.name, `%${search}%`),
+        ilike(employees.employeeCode, `%${search}%`)
+      );
+      if (searchCondition) {
+        filters.push(searchCondition);
+      }
+    }
+
+    return await db.query.employees.findMany({
+      where: and(...filters),
+      limit,
+      columns: {
+        id: true,
+        employeeCode: true,
+        name: true,
+        designation: true,
+        department: true,
+        status: true,
+      },
+      orderBy: [asc(employees.name)],
+    });
+  }
+
+  async updateWithSuperAdminCheck(id: string, data: Partial<NewEmployee>) {
+    return await db.transaction(async (tx) => {
+      // If we are changing role or status, we must ensure we don't remove the last active super admin
+      if ((data.role && data.role !== "super_admin") || (data.status && data.status !== "active")) {
+        const activeSuperAdmins = await tx
+          .select({ count: count() })
+          .from(employees)
+          .where(
+            and(
+              eq(employees.role, "super_admin"),
+              eq(employees.status, "active"),
+              isNull(employees.deletedAt)
+            )
+          )
+          .for("update"); // Lock rows to prevent race conditions
+
+        if (activeSuperAdmins[0].count <= 1) {
+          throw new Error("LAST_ACTIVE_SUPER_ADMIN");
+        }
+      }
+
+      const [employee] = await tx
+        .update(employees)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(employees.id, id))
+        .returning();
+      
+      return employee;
+    });
+  }
+
+  async softDeleteWithSuperAdminCheck(id: string) {
+    return await db.transaction(async (tx) => {
+      const activeSuperAdmins = await tx
+        .select({ count: count() })
+        .from(employees)
+        .where(
+          and(
+            eq(employees.role, "super_admin"),
+            eq(employees.status, "active"),
+            isNull(employees.deletedAt)
+          )
+        )
+        .for("update"); // Lock rows
+
+      if (activeSuperAdmins[0].count <= 1) {
+        throw new Error("LAST_ACTIVE_SUPER_ADMIN");
+      }
+
+      const [employee] = await tx
+        .update(employees)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(employees.id, id))
+        .returning();
+      
+      return employee;
+    });
+  }
 }

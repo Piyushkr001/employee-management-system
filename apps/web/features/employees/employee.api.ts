@@ -40,6 +40,17 @@ export const employeeApi = {
     });
   },
 
+  getManagerOptions: async (excludeEmployeeId?: string) => {
+    const searchParams = new URLSearchParams();
+    if (excludeEmployeeId) {
+      searchParams.append("excludeEmployeeId", excludeEmployeeId);
+    }
+    return fetchApi<{ managers: Pick<EmployeeDto, "id" | "employeeCode" | "name" | "designation" | "department" | "status">[] }>(
+      `/employees/manager-options?${searchParams.toString()}`,
+      { method: "GET" }
+    );
+  },
+
   getById: async (id: string) => {
     return fetchApi<EmployeeDto>(`/employees/${id}`, {
       method: "GET",

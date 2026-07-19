@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { AuthenticatedUserDto, ApiResponse } from "@empnexa/shared";
 import { cache } from "react";
 
@@ -22,6 +23,12 @@ export async function getCurrentUserServer(): Promise<AuthenticatedUserDto | nul
     });
 
     if (!res.ok) {
+      if (res.status === 401) {
+        return null;
+      }
+      if (res.status === 403) {
+        redirect("/unauthorized");
+      }
       if (res.status >= 500) {
         throw new Error("Backend service is unavailable");
       }

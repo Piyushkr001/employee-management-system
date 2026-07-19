@@ -46,8 +46,23 @@ app.use(cookieParser());
 const csrfProtection = (req: Request, res: Response, next: NextFunction) => {
   if (["POST", "PUT", "DELETE", "PATCH"].includes(req.method)) {
     const origin = req.get("origin");
+    
+    if (env.NODE_ENV === "production" && !origin) {
+      return next(new ApiError(403, "Missing Origin"));
+    }
+
     if (origin && origin !== env.CLIENT_URL) {
       return next(new ApiError(403, "Invalid Origin"));
+    }
+
+    const contentType = req.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      return next(new ApiError(415, "Content-Type must be application/json"));
+    }
+
+    const customHeader = req.get("x-empnexa-request");
+    if (customHeader !== "web") {
+      return next(new ApiError(403, "Missing or invalid X-EmpNexa-Request header"));
     }
   }
   next();

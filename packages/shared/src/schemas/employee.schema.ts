@@ -83,7 +83,7 @@ export const createEmployeeSchema = z.object({
 
   designation: z.string().trim().min(2).max(100),
 
-  salary: z.number().nonnegative().max(100000000),
+  salary: z.number().nonnegative().max(10_000_000, "Salary exceeds maximum allowed limit"),
 
   joiningDate: z
     .string()
@@ -127,3 +127,26 @@ export const updateEmployeeSchema = createEmployeeSchema.partial().extend({
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;
 
 export type EmployeeStatus = "active" | "inactive";
+
+export type PaginationMetadata = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+};
+
+export type PaginatedResponse<T> = {
+  data: T[];
+  pagination: PaginationMetadata;
+};
+
+export type ManagerOptionDto = {
+  id: string;
+  employeeCode: string;
+  name: string;
+  designation: string;
+  department: string;
+  status: "active" | "inactive";
+};

@@ -18,6 +18,10 @@ export class EmployeeService {
     };
   }
 
+  async getManagerOptions(query: { search?: string; excludeEmployeeId?: string; limit?: number }) {
+    return await this.repository.getManagerOptions(query);
+  }
+
   async getById(id: string, actorRole: UserRole) {
     const employee = await this.repository.findById(id);
     if (!employee) {
@@ -85,7 +89,8 @@ export class EmployeeService {
     } catch (error: any) {
       const dbError = mapDatabaseError(error);
       if (dbError) {
-        throw new ApiError(409, "Database conflict", dbError);
+        const status = ["INVALID_MANAGER", "NEGATIVE_SALARY", "SELF_MANAGER_NOT_ALLOWED"].includes(dbError) ? 422 : 409;
+        throw new ApiError(status, "Database conflict", dbError);
       }
       throw error;
     }
@@ -96,14 +101,6 @@ export class EmployeeService {
       const employee = await this.repository.findById(id);
       if (!employee) {
         throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
-      }
-
-      // Check last active Super Admin status/role change
-      if (employee.role === "super_admin" && (input.role && input.role !== "super_admin" || input.status && input.status !== "active")) {
-        const activeSuperAdmins = await this.repository.countActiveSuperAdmins();
-        if (activeSuperAdmins <= 1) {
-          throw new ApiError(409, "Cannot demote or deactivate the last active Super Admin", "LAST_ACTIVE_SUPER_ADMIN");
-        }
       }
 
       // Validate manager if provided
@@ -118,13 +115,26 @@ export class EmployeeService {
         delete updateData.salary;
       }
 
-      const updatedEmployee = await this.repository.update(id, updateData);
+      let updatedEmployee;
+      if (employee.role === "super_admin" && ((input.role && input.role !== "super_admin") || (input.status && input.status !== "active"))) {
+        try {
+          updatedEmployee = await this.repository.updateWithSuperAdminCheck(id, updateData);
+        } catch (e: any) {
+          if (e.message === "LAST_ACTIVE_SUPER_ADMIN") {
+            throw new ApiError(409, "Cannot demote or deactivate the last active Super Admin", "LAST_ACTIVE_SUPER_ADMIN");
+          }
+          throw e;
+        }
+      } else {
+        updatedEmployee = await this.repository.update(id, updateData);
+      }
       const includeSalary = actorRole === "super_admin" || actorRole === "hr_manager";
       return toEmployeeDto(updatedEmployee as any, includeSalary);
     } catch (error: any) {
       const dbError = mapDatabaseError(error);
       if (dbError) {
-        throw new ApiError(409, "Database conflict", dbError);
+        const status = ["INVALID_MANAGER", "NEGATIVE_SALARY", "SELF_MANAGER_NOT_ALLOWED"].includes(dbError) ? 422 : 409;
+        throw new ApiError(status, "Database conflict", dbError);
       }
       throw error;
     }
@@ -136,19 +146,23 @@ export class EmployeeService {
       throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
     }
 
-    if (employee.role === "super_admin") {
-      const activeSuperAdmins = await this.repository.countActiveSuperAdmins();
-      if (activeSuperAdmins <= 1) {
-        throw new ApiError(409, "Cannot delete the last active Super Admin", "LAST_ACTIVE_SUPER_ADMIN");
-      }
-    }
-
     const reporteeCount = await this.repository.countReportees(id);
     if (reporteeCount > 0) {
       throw new ApiError(409, "Cannot delete employee because they have reportees. Reassign them first.", "EMPLOYEE_HAS_REPORTEES");
     }
 
-    await this.repository.softDelete(id);
+    if (employee.role === "super_admin" && employee.status === "active") {
+      try {
+        await this.repository.softDeleteWithSuperAdminCheck(id);
+      } catch (e: any) {
+        if (e.message === "LAST_ACTIVE_SUPER_ADMIN") {
+          throw new ApiError(409, "Cannot delete the last active Super Admin", "LAST_ACTIVE_SUPER_ADMIN");
+        }
+        throw e;
+      }
+    } else {
+      await this.repository.softDelete(id);
+    }
     return { success: true };
   }
 }

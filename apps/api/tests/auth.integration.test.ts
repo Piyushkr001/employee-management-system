@@ -41,6 +41,7 @@ describe("Auth API Integration Tests", () => {
   it("should fail login with invalid credentials", async () => {
     const res = await request(app)
       .post("/api/auth/login")
+      .set("X-EmpNexa-Request", "web")
       .send({ email: "wrong@empnexa.com", password: "wrongpassword" });
 
     expect(res.status).toBe(401); // Unauthorized for invalid credentials
@@ -51,6 +52,7 @@ describe("Auth API Integration Tests", () => {
   it("should fail with validation errors if inputs are missing", async () => {
     const res = await request(app)
       .post("/api/auth/login")
+      .set("X-EmpNexa-Request", "web")
       .send({ email: "not-an-email" });
 
     expect(res.status).toBe(422);
@@ -63,6 +65,7 @@ describe("Auth API Integration Tests", () => {
   it("should successfully login with valid credentials and set cookie", async () => {
     const res = await request(app)
       .post("/api/auth/login")
+      .set("X-EmpNexa-Request", "web")
       .send({ email: "test@empnexa.com", password: "password123" });
 
     expect(res.status).toBe(200);

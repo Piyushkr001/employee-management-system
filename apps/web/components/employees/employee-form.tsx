@@ -78,17 +78,9 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
   useEffect(() => {
     async function fetchManagers() {
       try {
-        // Fetch users who could be managers (super_admin, hr_manager). 
-        // We'll just fetch all active employees and filter locally to simplify.
-        // In a huge org, you'd want a specific endpoint or query parameters.
-        const res = await employeeApi.list({ page: 1, limit: 1000, sortBy: "createdAt", sortOrder: "desc", status: "active" as any });
-        if (res.data) {
-          let potentialManagers = res.data.employees.filter(emp => emp.role !== "employee");
-          
-          if (isEditing) {
-            potentialManagers = potentialManagers.filter(emp => emp.id !== employee.id);
-          }
-          setManagers(potentialManagers);
+        const res = await employeeApi.getManagerOptions(isEditing ? employee?.id : undefined);
+        if (res.data?.managers) {
+          setManagers(res.data.managers as any);
         }
       } catch (error) {
         console.error("Failed to fetch managers", error);

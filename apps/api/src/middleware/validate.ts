@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import type { ZodType } from "zod";
-import { ZodError } from "zod";
+
 
 type RequestLocation = "body" | "query" | "params";
 
@@ -14,23 +14,22 @@ export function validate<T>(
     next: NextFunction,
   ) => {
     try {
-      const parsedData = await schema.parseAsync(req[location]);
+      const result = await schema.safeParseAsync(req[location]);
 
-      req[location] = parsedData as never;
-
-      next();
-    } catch (error) {
-      if (error instanceof ZodError) {
+      if (!result.success) {
         return res.status(422).json({
           success: false,
           message: "Validation failed",
           error: {
             code: "VALIDATION_ERROR",
-            fieldErrors: error.flatten().fieldErrors,
+            fieldErrors: result.error.flatten().fieldErrors,
           },
         });
       }
 
+      req[location] = result.data as never;
+      next();
+    } catch (error) {
       next(error);
     }
   };

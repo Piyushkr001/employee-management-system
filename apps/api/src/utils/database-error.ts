@@ -10,7 +10,7 @@ export function mapDatabaseError(error: any): string | null {
         }
         return "DUPLICATE_RECORD";
       case "23503": // foreign_key_violation
-        if (error.constraint === "employees_manager_id_fkey" || error.constraint === "employee_manager") {
+        if (error.constraint === "employees_manager_id_employees_id_fk") {
           return "INVALID_MANAGER";
         }
         return "FOREIGN_KEY_VIOLATION";
