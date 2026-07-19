@@ -16,6 +16,17 @@ type ApiResponse<T = undefined> = {
 };
 ```
 
+### Standardized Error Codes
+
+Common error codes returned in the `error.code` payload:
+- `UNAUTHENTICATED`: No token provided.
+- `INVALID_TOKEN`: Token signature is invalid or expired.
+- `INVALID_SESSION`: The associated employee was deleted.
+- `ACCOUNT_INACTIVE`: The associated employee is inactive.
+- `VALIDATION_ERROR`: Zod schema parsing failed.
+- `CIRCULAR_REPORTING`: Attempted to create an infinite manager cycle.
+- `LAST_ACTIVE_SUPER_ADMIN`: Attempted to remove the only active Super Admin.
+
 ## Endpoints
 
 ### Authentication

@@ -54,7 +54,24 @@ export class AuthRepository {
       where: and(
         eq(employees.id, id),
         isNull(employees.deletedAt)
-      )
+      ),
+      columns: {
+        id: true,
+        employeeCode: true,
+        name: true,
+        email: true,
+        phone: true,
+        department: true,
+        designation: true,
+        joiningDate: true,
+        status: true,
+        role: true,
+        managerId: true,
+        profileImageUrl: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+      }
     });
   }
 }

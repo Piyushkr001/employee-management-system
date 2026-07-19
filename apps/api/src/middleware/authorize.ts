@@ -5,7 +5,7 @@ import { UserRole } from "@empnexa/shared";
 export const authorize = (...allowedRoles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user || !req.user.role) {
-      return next(new ApiError(401, "Not authenticated"));
+      return next(new ApiError(401, "Not authenticated", "UNAUTHENTICATED"));
     }
 
     if (!allowedRoles.includes(req.user.role)) {

@@ -23,7 +23,7 @@ export class AuthController {
   getCurrentUser = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!userId) {
-      return sendResponse(res, 401, "Not authenticated");
+      return sendResponse(res, 401, "Not authenticated", undefined, { code: "UNAUTHENTICATED" });
     }
 
     const user = await this.service.getCurrentUser(userId);

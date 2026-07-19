@@ -1,16 +1,23 @@
-import { beforeAll, afterAll, beforeEach } from "bun:test";
-import db from "../../src/db";
-import { employees } from "../../src/db/schema/employees";
-import { client } from "../../src/db";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { testClient, testDb } from "./test-db";
+import { assertSafeTestDatabase } from "./database-safety";
+import { employees } from "../../src/db/schema";
 
-beforeAll(async () => {
-  // Any global setup
-});
+export async function setupTestDatabase(): Promise<void> {
+  assertSafeTestDatabase();
 
-afterAll(async () => {
-  // Let the process exit naturally instead of ending shared client
-});
+  await migrate(testDb, {
+    migrationsFolder: "./drizzle",
+  });
+}
 
-// beforeEach(async () => {
-//   // We do not clear the table to avoid concurrent test conflicts
-// });
+export async function cleanTestDatabase(): Promise<void> {
+  assertSafeTestDatabase();
+
+  // Clear employees table
+  await testDb.delete(employees);
+}
+
+export async function closeTestDatabase(): Promise<void> {
+  // Let Bun naturally close the connection to avoid killing shared module connection across concurrent test files
+}

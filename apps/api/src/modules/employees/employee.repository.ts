@@ -27,6 +27,9 @@ export class EmployeeRepository {
         eq(employees.id, id),
         isNull(employees.deletedAt)
       ),
+      columns: {
+        passwordHash: false,
+      },
       with: {
         manager: {
           columns: {

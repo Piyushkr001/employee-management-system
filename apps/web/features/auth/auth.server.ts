@@ -4,7 +4,7 @@ import { AuthenticatedUserDto, ApiResponse } from "@empnexa/shared";
 import { cache } from "react";
 import { AUTH_COOKIE_NAME } from "@/lib/auth-config";
 
-export const getCurrentUserServer = cache(async (): Promise<AuthenticatedUserDto | null> => {
+export const getCurrentUserServer = async (): Promise<AuthenticatedUserDto | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 

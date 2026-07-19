@@ -32,7 +32,7 @@ describe("Employee API Integration Tests", () => {
       return undefined;
     });
 
-    spyOn(EmployeeRepository.prototype, "create").mockImplementation(async (data) => {
+    spyOn(EmployeeRepository.prototype, "createEmployeeTransactionSafe").mockImplementation(async (data) => {
       return { id: "2", ...data } as any;
     });
   });

@@ -39,8 +39,9 @@ export const errorHandler = (
     console.error(`[Error] ${statusCode} - ${message}`);
   }
 
-  sendResponse(res, statusCode, message, undefined, {
-    code,
-    ...(fieldErrors ? { fieldErrors } : {}),
-  });
+  const errorPayload: any = {};
+  if (code) errorPayload.code = code;
+  if (fieldErrors) errorPayload.fieldErrors = fieldErrors;
+
+  sendResponse(res, statusCode, message, undefined, Object.keys(errorPayload).length > 0 ? errorPayload : undefined);
 };

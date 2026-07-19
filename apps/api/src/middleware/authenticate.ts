@@ -24,14 +24,14 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   const token = req.cookies[env.COOKIE_NAME];
   
   if (!token) {
-    return next(new ApiError(401, "Not authenticated"));
+    return next(new ApiError(401, "Not authenticated", "UNAUTHENTICATED"));
   }
 
   let payload;
   try {
     payload = verifyAccessToken(token);
   } catch (error) {
-    return next(new ApiError(401, "Invalid or expired token"));
+    return next(new ApiError(401, "Invalid or expired token", "INVALID_TOKEN"));
   }
 
   try {
@@ -39,11 +39,11 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     const user = await authRepository.findEmployeeIdentityById(payload.sub);
 
     if (!user || user.deletedAt) {
-      return next(new ApiError(401, "Authentication session is invalid"));
+      return next(new ApiError(401, "Authentication session is invalid", "INVALID_SESSION"));
     }
 
     if (user.status !== "active") {
-      return next(new ApiError(403, "Employee account is inactive"));
+      return next(new ApiError(403, "Employee account is inactive", "ACCOUNT_INACTIVE"));
     }
 
     req.user = {

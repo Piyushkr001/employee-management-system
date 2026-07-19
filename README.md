@@ -22,8 +22,9 @@ EmpNexa is a full-stack Employee Management System built with a modern stack pri
 3. Setup PostgreSQL database and update `.env` in `apps/api`
 4. Run `bun db:migrate` in `apps/api` to apply schema changes
 5. Run `bun db:seed` in `apps/api` to create the default super admin
-6. Run `bun run test:db` in `apps/api` to verify backend integrity
-7. Run `bun dev` in the root directory to start both web and api servers
+6. Update `.env.test` in `apps/api` with `TEST_DATABASE_URL` (this database will be completely wiped during tests!)
+7. Run `bun run test:db` in `apps/api` to verify backend integrity
+8. Run `bun dev` in the root directory to start both web and api servers
 
 ## Documentation
 - [API Documentation](./API.md)
