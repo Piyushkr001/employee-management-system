@@ -6,16 +6,8 @@ import { EmployeeRepository } from "../../src/modules/employees/employee.reposit
 describe("Soft Delete Integrity", () => {
   const repo = new EmployeeRepository();
 
-  beforeAll(async () => {
-    await setupTestDatabase();
-  });
-
   beforeEach(async () => {
     await cleanTestDatabase();
-  });
-
-  afterAll(async () => {
-    await closeTestDatabase();
   });
 
   test("should allow deleting an employee with no reportees", async () => {

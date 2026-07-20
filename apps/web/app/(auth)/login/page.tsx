@@ -4,7 +4,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { LoginForm } from "@/components/auth/login-form"
 import { AuthBrandPanel } from "@/components/auth/auth-brand-panel"
-import { getCurrentUserServer } from "@/features/auth/auth.server"
+import { getCurrentUserCached } from "@/features/auth/auth.server"
 
 export const metadata: Metadata = {
   title: "Login | EmpNexa",
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 }
 
 export default async function LoginPage() {
-  const user = await getCurrentUserServer();
+  const user = await getCurrentUserCached();
 
   if (user?.role === "employee") {
     redirect("/profile");

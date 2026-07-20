@@ -1,10 +1,10 @@
 import db from "../../db";
 import { employees } from "../../db/schema/employees";
-import { eq, and, isNull, ne, or, ilike, desc, asc, count, sql } from "drizzle-orm";
+import { eq, and, isNull, ne, or, ilike, desc, asc, count, sql, inArray } from "drizzle-orm";
 import { EmployeeListQuery, UserRole } from "@empnexa/shared";
 import { ApiError } from "../../utils/api-error";
 import { EMPLOYEE_HIERARCHY_LOCK_KEY, SUPER_ADMIN_INVARIANT_LOCK_KEY } from "./employee.constants";
-import { assertAllowedUpdateFields } from "./employee.authorization";
+import { assertActorCanUpdateEmployee } from "./employee.authorization";
 
 type NewEmployee = typeof employees.$inferInsert;
 
@@ -52,27 +52,43 @@ export class EmployeeRepository {
 
   async createEmployeeTransactionSafe(data: NewEmployee, actor: { id: string; role: UserRole }) {
     return await db.transaction(async (tx) => {
-      // Revalidate actor
-      const [actorRow] = await tx.select().from(employees).where(eq(employees.id, actor.id));
-      if (!actorRow || actorRow.status !== "active" || actorRow.deletedAt || actorRow.role !== actor.role) {
-         console.log("Actor validation failed in create:", { actorRow, actor });
+      if (data.managerId) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
+      }
+
+      const employeeIdsToLock = Array.from(new Set([actor.id, data.managerId].filter(Boolean) as string[])).sort();
+
+      const lockedEmployees = await tx
+        .select({
+          id: employees.id,
+          role: employees.role,
+          status: employees.status,
+          deletedAt: employees.deletedAt,
+        })
+        .from(employees)
+        .where(inArray(employees.id, employeeIdsToLock))
+        .orderBy(asc(employees.id))
+        .for("update");
+
+      const lockedActor = lockedEmployees.find(e => e.id === actor.id);
+      if (!lockedActor || lockedActor.status !== "active" || lockedActor.deletedAt || lockedActor.role !== actor.role) {
+         console.warn("Transactional actor validation failed", {
+           actorId: actor.id,
+           expectedRole: actor.role,
+           currentRole: lockedActor?.role,
+           currentStatus: lockedActor?.status,
+           isDeleted: lockedActor?.deletedAt != null,
+         });
          throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
       }
 
       if (data.managerId) {
-        await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
-
-        const [manager] = await tx
-          .select({ id: employees.id, status: employees.status })
-          .from(employees)
-          .where(and(eq(employees.id, data.managerId), isNull(employees.deletedAt)))
-          .for("update");
-
-        if (!manager) {
+        const lockedManager = lockedEmployees.find(e => e.id === data.managerId);
+        if (!lockedManager) {
           throw new ApiError(422, "Selected manager does not exist", "INVALID_MANAGER");
         }
 
-        if (manager.status !== "active") {
+        if (lockedManager.status !== "active") {
           throw new ApiError(422, "Selected manager is inactive", "INVALID_MANAGER");
         }
       }
@@ -84,48 +100,49 @@ export class EmployeeRepository {
 
   async updateEmployeeTransactionSafe(id: string, data: Partial<NewEmployee>, actor?: { id: string; role: UserRole }) {
     return await db.transaction(async (tx) => {
-      // Super Admin protection pre-check
-      let targetIsActiveSuperAdmin = false;
-      const [preCheck] = await tx.select({ role: employees.role, status: employees.status }).from(employees).where(eq(employees.id, id));
-      if (preCheck && preCheck.role === "super_admin" && preCheck.status === "active") {
-        targetIsActiveSuperAdmin = true;
-      }
-
-      const mayRemoveActiveSuperAdmin = targetIsActiveSuperAdmin && 
-        ((data.role !== undefined && data.role !== "super_admin") ||
-         (data.status !== undefined && data.status !== "active"));
-
-      if (mayRemoveActiveSuperAdmin) {
+      if (data.role !== undefined || data.status !== undefined) {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(${SUPER_ADMIN_INVARIANT_LOCK_KEY})`);
       }
 
-      // If managerId or status is being modified, acquire hierarchy lock
       if (data.managerId !== undefined || data.status === "inactive") {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
       }
 
-      if (actor) {
-        const [actorRow] = await tx.select().from(employees).where(eq(employees.id, actor.id));
-        if (!actorRow || actorRow.status !== "active" || actorRow.deletedAt || actorRow.role !== actor.role) {
-           console.log("Actor validation failed in update:", { actorRow, actor });
-           throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
-        }
-      }
+      const employeeIdsToLock = Array.from(new Set([actor?.id, id].filter(Boolean) as string[])).sort();
 
-      // Lock target employee
-      const [targetEmployee] = await tx
-        .select()
+      const lockedEmployees = await tx
+        .select({
+          id: employees.id,
+          role: employees.role,
+          status: employees.status,
+          deletedAt: employees.deletedAt,
+        })
         .from(employees)
-        .where(and(eq(employees.id, id), isNull(employees.deletedAt)))
+        .where(inArray(employees.id, employeeIdsToLock))
+        .orderBy(asc(employees.id))
         .for("update");
 
-      if (!targetEmployee) {
-        throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
-      }
+      let targetEmployee = lockedEmployees.find(e => e.id === id);
 
       if (actor) {
-        // Assert authorization contextually with latest DB state
-        assertAllowedUpdateFields(actor, targetEmployee as any, data as any);
+        const lockedActor = lockedEmployees.find(e => e.id === actor.id);
+        if (!lockedActor || lockedActor.status !== "active" || lockedActor.deletedAt || lockedActor.role !== actor.role) {
+           console.warn("Transactional actor validation failed", {
+             actorId: actor.id,
+             expectedRole: actor.role,
+             currentRole: lockedActor?.role,
+             currentStatus: lockedActor?.status,
+             isDeleted: lockedActor?.deletedAt != null,
+           });
+           throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
+        }
+
+        if (!targetEmployee) {
+          throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
+        }
+
+        // Authorization uses the locked state
+        assertActorCanUpdateEmployee(actor, targetEmployee as any, data as any);
         
         if (actor.role === "hr_manager" && targetEmployee.role === "super_admin") {
           throw new ApiError(403, "Cannot modify Super Admin", "CANNOT_MODIFY_SUPER_ADMIN");
@@ -133,6 +150,44 @@ export class EmployeeRepository {
         
         if (actor.role === "employee" && actor.id !== targetEmployee.id) {
           throw new ApiError(403, "Cannot modify another employee", "FORBIDDEN");
+        }
+      } else {
+        if (!targetEmployee) {
+          throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
+        }
+      }
+
+      // Manager validation
+      if (data.managerId) {
+        if (data.managerId === id) {
+          throw new ApiError(422, "Employee cannot manage themselves", "INVALID_MANAGER");
+        }
+
+        const [manager] = await tx
+          .select({ id: employees.id, status: employees.status })
+          .from(employees)
+          .where(and(eq(employees.id, data.managerId), isNull(employees.deletedAt)))
+          .for("update");
+
+        if (!manager) {
+          throw new ApiError(422, "Invalid manager ID", "INVALID_MANAGER");
+        }
+
+        if (manager.status !== "active") {
+          throw new ApiError(422, "Manager must be active", "INVALID_MANAGER");
+        }
+      }
+
+      // Manager deactivation policy
+      if (data.status === "inactive" && targetEmployee.status === "active") {
+        const reportees = await tx
+          .select({ id: employees.id })
+          .from(employees)
+          .where(and(eq(employees.managerId, id), eq(employees.status, "active"), isNull(employees.deletedAt)))
+          .for("update");
+
+        if (reportees.length > 0) {
+          throw new ApiError(409, "A manager cannot be deactivated while active reportees remain assigned.", "MANAGER_HAS_ACTIVE_REPORTEES");
         }
       }
 
@@ -161,39 +216,7 @@ export class EmployeeRepository {
         }
       }
 
-      // Manager deactivation policy
-      if (data.status === "inactive" && targetEmployee.status === "active") {
-        const reportees = await tx
-          .select({ id: employees.id })
-          .from(employees)
-          .where(and(eq(employees.managerId, id), eq(employees.status, "active"), isNull(employees.deletedAt)))
-          .for("update");
-
-        if (reportees.length > 0) {
-          throw new ApiError(409, "A manager cannot be deactivated while active reportees remain assigned.", "MANAGER_HAS_ACTIVE_REPORTEES");
-        }
-      }
-
-      // Manager validation
       if (data.managerId) {
-        if (data.managerId === id) {
-          throw new ApiError(422, "Employee cannot manage themselves", "INVALID_MANAGER");
-        }
-
-        const [manager] = await tx
-          .select({ id: employees.id, status: employees.status })
-          .from(employees)
-          .where(and(eq(employees.id, data.managerId), isNull(employees.deletedAt)))
-          .for("update");
-
-        if (!manager) {
-          throw new ApiError(422, "Invalid manager ID", "INVALID_MANAGER");
-        }
-
-        if (manager.status !== "active") {
-          throw new ApiError(422, "Manager must be active", "INVALID_MANAGER");
-        }
-
         // Path-aware recursive CTE to check for circular reporting
         const cycleCheckQuery = sql`
           WITH RECURSIVE manager_chain AS (
@@ -239,32 +262,36 @@ export class EmployeeRepository {
 
   async softDelete(id: string, actor: { id: string; role: UserRole }) {
     return await db.transaction(async (tx) => {
-      // Revalidate actor
-      const [actorRow] = await tx.select().from(employees).where(eq(employees.id, actor.id));
-      if (!actorRow || actorRow.status !== "active" || actorRow.deletedAt || actorRow.role !== actor.role) {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${SUPER_ADMIN_INVARIANT_LOCK_KEY})`);
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
+
+      const employeeIdsToLock = Array.from(new Set([actor.id, id])).sort();
+
+      const lockedEmployees = await tx
+        .select({
+          id: employees.id,
+          role: employees.role,
+          status: employees.status,
+          deletedAt: employees.deletedAt,
+        })
+        .from(employees)
+        .where(inArray(employees.id, employeeIdsToLock))
+        .orderBy(asc(employees.id))
+        .for("update");
+
+      const lockedActor = lockedEmployees.find(e => e.id === actor.id);
+      if (!lockedActor || lockedActor.status !== "active" || lockedActor.deletedAt || lockedActor.role !== actor.role) {
+         console.warn("Transactional actor validation failed", {
+           actorId: actor.id,
+           expectedRole: actor.role,
+           currentRole: lockedActor?.role,
+           currentStatus: lockedActor?.status,
+           isDeleted: lockedActor?.deletedAt != null,
+         });
          throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
       }
 
-      // Pre-check for Super Admin
-      let targetIsActiveSuperAdmin = false;
-      const [preCheck] = await tx.select({ role: employees.role, status: employees.status }).from(employees).where(eq(employees.id, id));
-      if (preCheck && preCheck.role === "super_admin" && preCheck.status === "active") {
-        targetIsActiveSuperAdmin = true;
-      }
-
-      if (targetIsActiveSuperAdmin) {
-        await tx.execute(sql`SELECT pg_advisory_xact_lock(${SUPER_ADMIN_INVARIANT_LOCK_KEY})`);
-      }
-
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
-
-      // Lock employee to delete
-      const [targetEmployee] = await tx
-        .select()
-        .from(employees)
-        .where(and(eq(employees.id, id), isNull(employees.deletedAt)))
-        .for("update");
-
+      const targetEmployee = lockedEmployees.find(e => e.id === id);
       if (!targetEmployee) {
         throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
       }

@@ -50,21 +50,21 @@ const csrfProtection = (req: Request, res: Response, next: NextFunction) => {
     const origin = req.get("origin");
     
     if (env.NODE_ENV === "production" && !origin) {
-      return next(new ApiError(403, "Missing Origin"));
+      return next(new ApiError(403, "Missing Origin", "INVALID_ORIGIN"));
     }
 
     if (origin && origin !== env.CLIENT_URL) {
-      return next(new ApiError(403, "Invalid Origin"));
+      return next(new ApiError(403, "Invalid Origin", "INVALID_ORIGIN"));
     }
 
     const contentType = req.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
-      return next(new ApiError(415, "Content-Type must be application/json"));
+      return next(new ApiError(415, "Content-Type must be application/json", "INVALID_CONTENT_TYPE"));
     }
 
     const customHeader = req.get("x-empnexa-request");
     if (customHeader !== "web") {
-      return next(new ApiError(403, "Missing or invalid X-EmpNexa-Request header"));
+      return next(new ApiError(403, "Missing or invalid X-EmpNexa-Request header", "INVALID_REQUEST_HEADER"));
     }
   }
   next();

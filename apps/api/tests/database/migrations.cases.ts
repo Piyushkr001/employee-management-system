@@ -4,14 +4,6 @@ import { testDb } from "./test-db";
 import { sql } from "drizzle-orm";
 
 describe("Database Migrations", () => {
-  beforeAll(async () => {
-    await setupTestDatabase();
-  });
-
-  afterAll(async () => {
-    await closeTestDatabase();
-  });
-
   test("Employee table constraints should exist", async () => {
     // Verify table exists
     const tableRes = await testDb.execute(sql`

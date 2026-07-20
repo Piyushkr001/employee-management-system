@@ -6,16 +6,8 @@ import { AuthRepository } from "../../src/modules/auth/auth.repository";
 describe("Authentication DB Logic", () => {
   const repo = new AuthRepository();
 
-  beforeAll(async () => {
-    await setupTestDatabase();
-  });
-
   beforeEach(async () => {
     await cleanTestDatabase();
-  });
-
-  afterAll(async () => {
-    await closeTestDatabase();
   });
 
   test("login query should exclude salaryInPaise but include passwordHash", async () => {

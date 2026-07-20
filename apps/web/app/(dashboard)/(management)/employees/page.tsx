@@ -1,6 +1,6 @@
 import { getCurrentUserCached } from "@/features/auth/auth.server";
 import { getEmployeesServer } from "@/features/employees/employee.server";
-import { employeeListQuerySchema } from "@empnexa/shared";
+import { employeeListQuerySchema, EmployeeListQuery, PaginationMetadata } from "@empnexa/shared";
 import { EmployeeTable } from "@/components/employees/employee-table";
 import { EmployeeSearch } from "@/components/employees/employee-search";
 import { EmployeeFilters } from "@/components/employees/employee-filters";
@@ -37,14 +37,14 @@ export default async function EmployeesPage({
     sortOrder: firstValue(resolvedSearchParams.sortOrder),
   };
 
-  const validQuery: any = {};
+  const validQuery: Partial<EmployeeListQuery> = {};
   for (const [key, value] of Object.entries(rawQuery)) {
     if (value !== undefined) {
-      const fieldSchema = (employeeListQuerySchema.shape as any)[key];
+      const fieldSchema = (employeeListQuerySchema.shape as Record<string, any>)[key];
       if (fieldSchema) {
         const result = fieldSchema.safeParse(value);
         if (result.success) {
-          validQuery[key] = result.data;
+          (validQuery as any)[key] = result.data;
         }
       }
     }
@@ -84,7 +84,7 @@ export default async function EmployeesPage({
       <EmployeeTable 
         employees={employees} 
         currentUserRole={user.role} 
-        pagination={pagination as any} 
+        pagination={pagination as PaginationMetadata} 
       />
     </div>
   );

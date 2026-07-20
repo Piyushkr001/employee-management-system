@@ -14,11 +14,15 @@ export function assertSafeTestDatabase(): void {
   const normalParsed = normalDatabaseUrl ? new URL(normalDatabaseUrl) : null;
 
   if (normalParsed) {
+    const effectiveTestPort = parsed.port || "5432";
+    const effectiveNormalPort = normalParsed.port || "5432";
+    const normalizedTestDbName = parsed.pathname.replace(/^\/+/, "").toLowerCase();
+    const normalizedNormalDbName = normalParsed.pathname.replace(/^\/+/, "").toLowerCase();
+
     if (
-      parsed.hostname === normalParsed.hostname &&
-      parsed.port === normalParsed.port &&
-      parsed.username === normalParsed.username &&
-      parsed.pathname === normalParsed.pathname
+      parsed.hostname.toLowerCase() === normalParsed.hostname.toLowerCase() &&
+      effectiveTestPort === effectiveNormalPort &&
+      normalizedTestDbName === normalizedNormalDbName
     ) {
       throw new Error("Refusing to run tests because TEST_DATABASE_URL connects to the same DB as DATABASE_URL");
     }

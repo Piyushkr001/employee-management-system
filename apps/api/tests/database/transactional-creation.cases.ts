@@ -6,16 +6,8 @@ import { EmployeeRepository } from "../../src/modules/employees/employee.reposit
 describe("Transactional Creation", () => {
   const repo = new EmployeeRepository();
 
-  beforeAll(async () => {
-    await setupTestDatabase();
-  });
-
   beforeEach(async () => {
     await cleanTestDatabase();
-  });
-
-  afterAll(async () => {
-    await closeTestDatabase();
   });
 
   test("should rollback creation if manager does not exist", async () => {

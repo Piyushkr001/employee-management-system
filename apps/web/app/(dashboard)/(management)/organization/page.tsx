@@ -1,8 +1,8 @@
-import { getCurrentUserServer } from "@/features/auth/auth.server";
+import { getCurrentUserCached } from "@/features/auth/auth.server";
 import { redirect } from "next/navigation";
 
 export default async function OrganizationPage() {
-  const user = await getCurrentUserServer();
+  const user = await getCurrentUserCached();
   if (!user || !["super_admin", "hr_manager"].includes(user.role)) {
     redirect("/unauthorized");
   }

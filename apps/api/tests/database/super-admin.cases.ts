@@ -6,16 +6,8 @@ import { EmployeeRepository } from "../../src/modules/employees/employee.reposit
 describe("Super Admin Protection", () => {
   const repo = new EmployeeRepository();
 
-  beforeAll(async () => {
-    await setupTestDatabase();
-  });
-
   beforeEach(async () => {
     await cleanTestDatabase();
-  });
-
-  afterAll(async () => {
-    await closeTestDatabase();
   });
 
   test("should prevent demoting the last active super admin", async () => {
@@ -59,11 +51,13 @@ describe("Super Admin Protection", () => {
   test("should concurrently protect the last active super admin", async () => {
     const admin1 = await createActiveSuperAdmin();
     const admin2 = await createActiveSuperAdmin();
-    const actor = { id: admin1.id, role: admin1.role };
 
-    // Both attempt to deactivate the OTHER super admin
-    const attempt1 = repo.updateEmployeeTransactionSafe(admin2.id, { status: "inactive" }, actor);
-    const attempt2 = repo.updateEmployeeTransactionSafe(admin1.id, { status: "inactive" }, actor);
+    const actor1 = { id: admin1.id, role: admin1.role };
+    const actor2 = { id: admin2.id, role: admin2.role };
+
+    // Both attempt to deactivate themselves
+    const attempt1 = repo.updateEmployeeTransactionSafe(admin1.id, { status: "inactive" }, actor1);
+    const attempt2 = repo.updateEmployeeTransactionSafe(admin2.id, { status: "inactive" }, actor2);
 
     const results = await Promise.allSettled([attempt1, attempt2]);
     

@@ -23,39 +23,32 @@ export function canViewEmployee(actor: Actor, target: TargetEmployee): boolean {
   return actor.id === target.id;
 }
 
-export function canCreateEmployee(actor: Actor, input: CreateEmployeeInput): boolean {
+export function assertActorCanCreateEmployee(actor: Actor, input: CreateEmployeeInput): void {
   if (actor.role === "super_admin") {
-    return true;
+    return;
   }
   
   if (actor.role === "hr_manager") {
-    return input.role !== "super_admin";
+    if (input.role === "super_admin") {
+      throw new ApiError(403, "HR Managers cannot create Super Admins", "FORBIDDEN");
+    }
+    return;
   }
 
-  return false;
+  throw new ApiError(403, "You do not have permission to create employees", "FORBIDDEN");
 }
 
-export function canUpdateEmployee(actor: Actor, target: TargetEmployee): boolean {
-  if (actor.role === "super_admin") {
-    return true;
-  }
-  
-  if (actor.role === "hr_manager") {
-    return target.role !== "super_admin";
-  }
-  
-  // Employees can update themselves (but only specific fields which is handled by filtering)
-  return actor.id === target.id;
-}
-
-export function assertAllowedUpdateFields(actor: Actor, target: TargetEmployee, input: UpdateEmployeeInput): void {
+export function assertActorCanUpdateEmployee(actor: Actor, target: TargetEmployee, input: UpdateEmployeeInput): void {
   if (actor.role === "super_admin") {
     return;
   }
 
   if (actor.role === "hr_manager") {
+    if (target.role === "super_admin") {
+      throw new ApiError(403, "Cannot modify Super Admin", "CANNOT_MODIFY_SUPER_ADMIN");
+    }
     if (input.role === "super_admin") {
-      throw new ApiError(403, "HR Managers cannot assign the Super Admin role", "FORBIDDEN_ROLE_ASSIGNMENT");
+      throw new ApiError(403, "HR Managers cannot assign the Super Admin role", "FORBIDDEN");
     }
     return;
   }
@@ -71,22 +64,22 @@ export function assertAllowedUpdateFields(actor: Actor, target: TargetEmployee, 
     }
     return;
   }
+
+  throw new ApiError(403, "Cannot modify another employee", "FORBIDDEN");
 }
 
 export function filterAllowedUpdateFields(actor: Actor, target: TargetEmployee, input: UpdateEmployeeInput): UpdateEmployeeInput {
-  assertAllowedUpdateFields(actor, target, input);
+  assertActorCanUpdateEmployee(actor, target, input);
   return input;
 }
 
-export function canDeleteEmployee(actor: Actor, target: TargetEmployee): boolean {
+export function assertActorCanDeleteEmployee(actor: Actor, target: TargetEmployee): void {
   if (actor.role !== "super_admin") {
-    return false;
+    throw new ApiError(403, "You do not have permission to delete employees", "FORBIDDEN");
   }
   
   // Super admin cannot delete themselves
   if (actor.id === target.id) {
-    return false;
+    throw new ApiError(403, "Cannot delete yourself", "FORBIDDEN");
   }
-  
-  return true;
 }

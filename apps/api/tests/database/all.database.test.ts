@@ -9,14 +9,14 @@ describe("Database Integration Tests (Serial)", () => {
 
   afterAll(async () => {
     await closeTestDatabase();
-    await testClient.end();
   });
 
-  require("./migrations.test.ts");
-  require("./constraints.test.ts");
-  require("./transactional-creation.test.ts");
-  require("./hierarchy.test.ts");
-  require("./soft-delete.test.ts");
-  require("./super-admin.test.ts");
-  require("./auth-db.test.ts");
+  require("./migrations.cases.ts");
+  require("./constraints.cases.ts");
+  require("./transactional-creation.cases.ts");
+  require("./hierarchy.cases.ts");
+  require("./soft-delete.cases.ts");
+  require("./super-admin.cases.ts");
+  require("./auth-db.cases.ts");
+  require("./http-postgres.cases.ts");
 });

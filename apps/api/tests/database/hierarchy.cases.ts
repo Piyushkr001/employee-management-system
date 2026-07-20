@@ -6,16 +6,8 @@ import { EmployeeRepository } from "../../src/modules/employees/employee.reposit
 describe("Hierarchy Constraints", () => {
   const repo = new EmployeeRepository();
 
-  beforeAll(async () => {
-    await setupTestDatabase();
-  });
-
   beforeEach(async () => {
     await cleanTestDatabase();
-  });
-
-  afterAll(async () => {
-    await closeTestDatabase();
   });
 
   test("should prevent direct self-management via update", async () => {

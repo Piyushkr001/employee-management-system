@@ -80,14 +80,14 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
 
   const { dirtyFields } = form.formState;
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormType) => {
     setIsLoading(true);
     try {
       if (isEditing) {
         const payload: Partial<UpdateEmployeeInput> = {};
         Object.keys(dirtyFields).forEach(key => {
           if (key !== "password" && key !== "employeeCode") {
-            payload[key as keyof UpdateEmployeeInput] = data[key];
+            payload[key as keyof UpdateEmployeeInput] = data[key as keyof FormType] as any;
           }
         });
 

@@ -7,16 +7,8 @@ import postgres from "postgres";
 import { unwrapPostgreSqlError } from "../../src/utils/database-error";
 
 describe("Database Constraints", () => {
-  beforeAll(async () => {
-    await setupTestDatabase();
-  });
-
   beforeEach(async () => {
     await cleanTestDatabase();
-  });
-
-  afterAll(async () => {
-    await closeTestDatabase();
   });
 
   test("should reject negative salary", async () => {

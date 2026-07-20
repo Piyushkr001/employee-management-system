@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUserServer } from "@/features/auth/auth.server";
+import { getCurrentUserCached } from "@/features/auth/auth.server";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 
 export default async function DashboardLayout({
@@ -7,7 +7,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUserServer();
+  const user = await getCurrentUserCached();
 
   if (!user) {
     redirect("/login");

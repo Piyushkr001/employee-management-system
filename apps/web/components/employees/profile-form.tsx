@@ -29,7 +29,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<any>({
+  const form = useForm<ProfileUpdateInput>({
     resolver: zodResolver(profileUpdateSchema) as any,
     defaultValues: {
       phone: initialData.phone || "",
@@ -39,12 +39,12 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   
   const { dirtyFields } = form.formState;
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: ProfileUpdateInput) => {
     setIsLoading(true);
     try {
       const payload: Partial<ProfileUpdateInput> = {};
       Object.keys(dirtyFields).forEach(key => {
-        payload[key as keyof ProfileUpdateInput] = data[key];
+        payload[key as keyof ProfileUpdateInput] = data[key as keyof ProfileUpdateInput] as any;
       });
 
       if (Object.keys(payload).length === 0) {

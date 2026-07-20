@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { EmployeeService } from "./employee.service";
 import { sendResponse } from "../../utils/response";
 import { EmployeeListQuery, EmployeeIdParams, CreateEmployeeInput, UpdateEmployeeInput, ManagerOptionsQuery } from "@empnexa/shared";
-import { canListEmployees, canViewEmployee, canCreateEmployee, canUpdateEmployee, filterAllowedUpdateFields, canDeleteEmployee } from "./employee.authorization";
+import { canListEmployees, canViewEmployee, assertActorCanCreateEmployee, assertActorCanDeleteEmployee, filterAllowedUpdateFields } from "./employee.authorization";
 import { ApiError } from "../../utils/api-error";
 import { AuthRepository } from "../auth/auth.repository";
 
@@ -91,9 +91,7 @@ export class EmployeeController {
       const actor = req.user!;
       const input = req.body as CreateEmployeeInput;
 
-      if (!canCreateEmployee(actor, input)) {
-        return next(new ApiError(403, "You do not have permission to create this employee", "FORBIDDEN"));
-      }
+      assertActorCanCreateEmployee(actor, input);
 
       const employee = await this.service.create(input, actor);
       sendResponse(res, 201, "Employee created successfully", employee);
@@ -113,10 +111,6 @@ export class EmployeeController {
 
       if (!target || target.deletedAt) {
         return next(new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND"));
-      }
-
-      if (!canUpdateEmployee(actor, target as any)) {
-        return next(new ApiError(403, "You do not have permission to update this employee", "FORBIDDEN"));
       }
 
       const allowedInput = filterAllowedUpdateFields(actor, target as any, input);
@@ -143,9 +137,7 @@ export class EmployeeController {
         return next(new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND"));
       }
 
-      if (!canDeleteEmployee(actor, target as any)) {
-        return next(new ApiError(403, "You do not have permission to delete this employee", "FORBIDDEN"));
-      }
+      assertActorCanDeleteEmployee(actor, target as any);
 
       await this.service.softDelete(params.id, actor);
       sendResponse(res, 200, "Employee deleted successfully");

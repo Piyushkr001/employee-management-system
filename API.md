@@ -26,6 +26,15 @@ Common error codes returned in the `error.code` payload:
 - `VALIDATION_ERROR`: Zod schema parsing failed.
 - `CIRCULAR_REPORTING`: Attempted to create an infinite manager cycle.
 - `LAST_ACTIVE_SUPER_ADMIN`: Attempted to remove the only active Super Admin.
+- `INVALID_ORIGIN`: Cross-Origin request failed CORS or CSRF check.
+- `INVALID_CONTENT_TYPE`: Request body must be application/json.
+- `INVALID_REQUEST_HEADER`: Missing X-EmpNexa-Request header for mutations.
+- `FORBIDDEN`: User does not have permission for this operation.
+- `FORBIDDEN_FIELD`: User does not have permission to modify specific fields.
+- `CANNOT_MODIFY_SUPER_ADMIN`: User attempted to modify a Super Admin without permission.
+- `MANAGER_HAS_ACTIVE_REPORTEES`: Attempted to deactivate a manager that still has active direct reports.
+- `EMPLOYEE_NOT_FOUND`: The requested employee does not exist.
+- `EMAIL_ALREADY_EXISTS`: Registration failed because email is already in use.
 
 ## Endpoints
 

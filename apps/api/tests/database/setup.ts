@@ -23,5 +23,5 @@ export async function cleanTestDatabase(): Promise<void> {
 }
 
 export async function closeTestDatabase(): Promise<void> {
-  // Let the test runner handle connection closure
+  await testClient.end();
 }
