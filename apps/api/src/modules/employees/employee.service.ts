@@ -1,9 +1,11 @@
-import { EmployeeRepository } from "./employee.repository";
+import { EmployeeRepository, EmployeeListRecord, EmployeeDetailRecord, EmployeeMutationRecord } from "./employee.repository";
 import { ApiError } from "../../utils/api-error";
 import { CreateEmployeeInput, UpdateEmployeeInput, EmployeeListQuery, UserRole } from "@empnexa/shared";
 import { hashPassword } from "../../utils/password";
 import { toEmployeeDto } from "./employee.mapper";
-import { mapDatabaseError } from "../../utils/database-error";
+import { mapPostgreSqlError } from "../../utils/db-error";
+
+type NewEmployeeInput = Omit<EmployeeMutationRecord, "id" | "createdAt" | "updatedAt" | "deletedAt">;
 
 export class EmployeeService {
   private repository = new EmployeeRepository();
@@ -13,7 +15,7 @@ export class EmployeeService {
     const includeSalary = actorRole === "super_admin" || actorRole === "hr_manager";
     
     return {
-      employees: result.employees.map(emp => toEmployeeDto(emp as any, includeSalary)),
+      employees: result.employees.map((emp) => toEmployeeDto(emp, includeSalary)),
       pagination: result.pagination
     };
   }
@@ -37,7 +39,7 @@ export class EmployeeService {
     }
 
     const includeSalary = actorRole === "super_admin" || actorRole === "hr_manager";
-    return toEmployeeDto(employee as any, includeSalary);
+    return toEmployeeDto(employee, includeSalary);
   }
 
   async create(input: CreateEmployeeInput, actor: { id: string; role: UserRole }) {
@@ -47,19 +49,22 @@ export class EmployeeService {
 
       const { password, salary, ...restInput } = input;
 
-      const newEmployee = await this.repository.createEmployeeTransactionSafe({
+      const newEmployeeData: NewEmployeeInput = {
         ...restInput,
         passwordHash: hashedPassword,
         salaryInPaise,
         joiningDate: input.joiningDate,
-      } as any, actor);
+        profileImageUrl: input.profileImageUrl ?? null,
+        managerId: input.managerId ?? null,
+      };
 
-      return toEmployeeDto(newEmployee as any, true);
-    } catch (error: any) {
-      const dbError = mapDatabaseError(error);
+      const newEmployee = await this.repository.createEmployeeTransactionSafe(newEmployeeData, actor);
+
+      return toEmployeeDto(newEmployee, true);
+    } catch (error: unknown) {
+      const dbError = mapPostgreSqlError(error);
       if (dbError) {
-        const status = ["INVALID_MANAGER", "NEGATIVE_SALARY", "SELF_MANAGER_NOT_ALLOWED"].includes(dbError) ? 422 : 409;
-        throw new ApiError(status, "Database conflict", dbError);
+        throw dbError;
       }
       throw error;
     }
@@ -67,22 +72,21 @@ export class EmployeeService {
 
   async update(id: string, input: UpdateEmployeeInput, actor: { id: string; role: UserRole }) {
     try {
-      const updateData: any = { ...input };
+      const updateData: Partial<NewEmployeeInput> = { ...input } as any;
 
       if (input.salary !== undefined) {
         updateData.salaryInPaise = Math.round(input.salary * 100);
-        delete updateData.salary;
+        delete (updateData as any).salary;
       }
 
       const updatedEmployee = await this.repository.updateEmployeeTransactionSafe(id, updateData, actor);
       
       const includeSalary = actor.role === "super_admin" || actor.role === "hr_manager";
-      return toEmployeeDto(updatedEmployee as any, includeSalary);
-    } catch (error: any) {
-      const dbError = mapDatabaseError(error);
+      return toEmployeeDto(updatedEmployee, includeSalary);
+    } catch (error: unknown) {
+      const dbError = mapPostgreSqlError(error);
       if (dbError) {
-        const status = ["INVALID_MANAGER", "NEGATIVE_SALARY", "SELF_MANAGER_NOT_ALLOWED"].includes(dbError) ? 422 : 409;
-        throw new ApiError(status, "Database conflict", dbError);
+        throw dbError;
       }
       throw error;
     }

@@ -4,7 +4,7 @@ import { createTestEmployee } from "./fixtures";
 import { testDb } from "./test-db";
 import { employees } from "../../src/db/schema";
 import postgres from "postgres";
-import { unwrapPostgreSqlError } from "../../src/utils/database-error";
+import { mapPostgreSqlError, unwrapPostgreSqlError } from "../../src/utils/db-error";
 
 describe("Database Constraints", () => {
   beforeEach(async () => {
@@ -18,7 +18,7 @@ describe("Database Constraints", () => {
     } catch (error) {
       const postgresError = unwrapPostgreSqlError(error);
       expect(postgresError?.code).toBe("23514");
-      expect(postgresError?.constraint).toBe("employees_salary_non_negative");
+      expect(postgresError?.constraint || postgresError?.constraint_name).toBe("employees_salary_non_negative");
     }
   });
 
@@ -32,7 +32,7 @@ describe("Database Constraints", () => {
     } catch (error) {
       const postgresError = unwrapPostgreSqlError(error);
       expect(postgresError?.code).toBe("23514");
-      expect(postgresError?.constraint).toBe("employees_manager_not_self");
+      expect(postgresError?.constraint || postgresError?.constraint_name).toBe("employees_manager_not_self");
     }
   });
 
@@ -43,7 +43,7 @@ describe("Database Constraints", () => {
     } catch (error) {
       const postgresError = unwrapPostgreSqlError(error);
       expect(postgresError?.code).toBe("23503");
-      expect(postgresError?.constraint).toBe("employees_manager_id_employees_id_fk");
+      expect(postgresError?.constraint || postgresError?.constraint_name).toBe("employees_manager_id_employees_id_fk");
     }
   });
 
@@ -55,7 +55,7 @@ describe("Database Constraints", () => {
     } catch (error) {
       const postgresError = unwrapPostgreSqlError(error);
       expect(postgresError?.code).toBe("23505");
-      expect(postgresError?.constraint).toBe("employees_email_unique");
+      expect(postgresError?.constraint || postgresError?.constraint_name).toBe("employees_email_unique");
     }
   });
 
@@ -67,7 +67,7 @@ describe("Database Constraints", () => {
     } catch (error) {
       const postgresError = unwrapPostgreSqlError(error);
       expect(postgresError?.code).toBe("23505");
-      expect(postgresError?.constraint).toBe("employees_employee_code_unique");
+      expect(postgresError?.constraint || postgresError?.constraint_name).toBe("employees_employee_code_unique");
     }
   });
 });

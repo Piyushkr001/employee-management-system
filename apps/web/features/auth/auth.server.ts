@@ -12,7 +12,13 @@ export const getCurrentUserServer = async (): Promise<AuthenticatedUserDto | nul
     return null;
   }
 
-  const baseUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  const internalApiUrl = process.env.API_INTERNAL_URL;
+
+  if (process.env.NODE_ENV === "production" && !internalApiUrl) {
+    throw new Error("API_INTERNAL_URL is required in production");
+  }
+
+  const baseUrl = internalApiUrl || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
   
   let res: Response;
   try {

@@ -269,7 +269,7 @@ export class EmployeeRepository {
         }
 
         // Authorization uses the locked state
-        assertActorCanUpdateEmployee(actor, targetEmployee as any, data as any);
+        assertActorCanUpdateEmployee(actor, targetEmployee, data as unknown as import("@empnexa/shared").UpdateEmployeeInput);
         
         if (actor.role === "hr_manager" && targetEmployee.role === "super_admin") {
           throw new ApiError(403, "Cannot modify Super Admin", "CANNOT_MODIFY_SUPER_ADMIN");

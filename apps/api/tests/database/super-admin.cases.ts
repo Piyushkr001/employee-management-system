@@ -70,6 +70,16 @@ describe("Super Admin Protection", () => {
     
     if (failed[0] && failed[0].status === "rejected") {
       expect(["LAST_ACTIVE_SUPER_ADMIN", "FORBIDDEN"]).toContain(failed[0].reason.code);
+      expect(failed[0].reason.code).not.toBe("40P01");
     }
+
+    const { testDb } = require("./test-db");
+    const { employees } = require("../../src/db/schema/employees");
+    const { and, eq, isNull } = require("drizzle-orm");
+
+    const activeAdmins = await testDb.select({ id: employees.id }).from(employees)
+      .where(and(eq(employees.role, "super_admin"), eq(employees.status, "active"), isNull(employees.deletedAt)));
+    
+    expect(activeAdmins).toHaveLength(1);
   }, 10000);
 });

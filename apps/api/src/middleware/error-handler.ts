@@ -20,7 +20,7 @@ export const errorHandler = (
     code = err.code;
     fieldErrors = err.fieldErrors;
   } else if (err instanceof ZodError || err.name === "ZodError") {
-    statusCode = 400;
+    statusCode = 422;
     message = "Validation Error";
     code = "VALIDATION_ERROR";
     if (err instanceof ZodError) {
@@ -32,11 +32,16 @@ export const errorHandler = (
     code = "UNAUTHORIZED";
   }
 
-  // Only log unexpected server errors with full stack trace, avoiding sending stack trace to client
+  // Logging Policy
   if (statusCode === 500) {
     console.error(`[Error] 500 - ${err.message}\n`, err.stack);
-  } else {
-    console.error(`[Error] ${statusCode} - ${message}`);
+  } else if (statusCode === 401 || statusCode === 403) {
+    console.warn(`[Security] ${statusCode} - ${message} [Code: ${code}]`);
+  } else if (statusCode !== 404 && statusCode !== 422) {
+    // Other 4xx except 404 and 422 validations (like 409 conflict) could just not be logged at error, or optionally info. 
+    // "Expected validation errors -> no error-level log"
+    // "Not-found errors -> no error-level log"
+    // "Database/network failures -> error-level log" (which are 500s or unhandled)
   }
 
   const errorPayload: any = {};

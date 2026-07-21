@@ -2,12 +2,19 @@ import { cookies } from "next/headers";
 import type { ApiResponse } from "@empnexa/shared";
 import { AUTH_COOKIE_NAME } from "@/lib/auth-config";
 
-const getServerApiBaseUrl = () =>
-  (
-    process.env.API_INTERNAL_URL ??
+const getServerApiBaseUrl = () => {
+  const internalApiUrl = process.env.API_INTERNAL_URL;
+
+  if (process.env.NODE_ENV === "production" && !internalApiUrl) {
+    throw new Error("API_INTERNAL_URL is required in production");
+  }
+
+  return (
+    internalApiUrl ??
     process.env.NEXT_PUBLIC_API_URL ??
     "http://localhost:5000/api"
   ).replace(/\/+$/, "");
+};
 
 export async function fetchEmployeeApiServer<T>(
   endpoint: string,

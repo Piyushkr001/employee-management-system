@@ -1,13 +1,15 @@
-import { employees } from "../../db/schema/employees";
+import { EmployeeMutationRecord, EmployeeDetailRecord, EmployeeListRecord } from "./employee.repository";
 
-import { EmployeeMutationRecord, EmployeeDetailRecord } from "./employee.repository";
+export function toEmployeeDto(
+  employee: EmployeeMutationRecord | EmployeeDetailRecord | EmployeeListRecord, 
+  includeSalary: boolean = false
+) {
+  const emp = employee as Partial<EmployeeDetailRecord & EmployeeMutationRecord>;
+  const { passwordHash, deletedAt, salaryInPaise, ...rest } = emp;
 
-export function toEmployeeDto(employee: EmployeeMutationRecord | EmployeeDetailRecord, includeSalary: boolean = false) {
-  const { passwordHash, deletedAt, salaryInPaise, ...rest } = employee as any;
-
-  const dto: any = { ...rest };
+  const dto: Record<string, unknown> = { ...rest };
   
-  if (includeSalary) {
+  if (includeSalary && salaryInPaise !== undefined) {
     dto.salary = salaryInPaise / 100;
   }
 

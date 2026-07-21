@@ -78,7 +78,7 @@ export function ManagerSelect({ value, onChange, excludeEmployeeId, disabled, cu
         className={cn(buttonVariants({ variant: "outline" }), "w-full justify-between font-normal")}
         disabled={disabled}
       >
-        {value === "none" ? "No manager" : (selectedManager ? `${selectedManager.name} (${selectedManager.employeeCode})` : (value ? "Loading..." : "Select manager..."))}
+        {value === "none" ? "No manager" : (selectedManager ? `${selectedManager.name} (${selectedManager.employeeCode})` : (value ? (isLoading ? "Loading..." : "Unknown/Deleted Manager") : "Select manager..."))}
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">

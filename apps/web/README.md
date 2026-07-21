@@ -1,36 +1,15 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EmpNexa Web (Frontend)
 
-## Getting Started
+This is the Next.js frontend application for EmpNexa, built using the App Router.
 
-First, run the development server:
+## Environment Variables
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Ensure your `apps/web/.env` is properly configured:
+- `NEXT_PUBLIC_API_URL=/backend`: Used by the browser client to hit the Next.js API proxy route. This ensures same-origin requests to preserve HTTP-only cookies without complex CORS configurations.
+- `API_PROXY_TARGET`: The backend URL the Next.js proxy should forward requests to.
+- `API_INTERNAL_URL`: Mandatory for production Server Components to communicate with the backend.
+- `AUTH_COOKIE_NAME`: The name of the authentication cookie to read (e.g. `empnexa_token`). This must identically match the backend's `COOKIE_NAME`.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+In production, ensure `API_INTERNAL_URL` is configured correctly, otherwise the build and server startup will intentionally fail to protect against broken Server Component renders.

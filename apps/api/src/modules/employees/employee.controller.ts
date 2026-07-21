@@ -5,6 +5,7 @@ import { EmployeeListQuery, EmployeeIdParams, CreateEmployeeInput, UpdateEmploye
 import { canListEmployees, canViewEmployee, assertActorCanCreateEmployee, assertActorCanDeleteEmployee, filterAllowedUpdateFields } from "./employee.authorization";
 import { ApiError } from "../../utils/api-error";
 import { AuthRepository } from "../auth/auth.repository";
+import { EmployeeAuthProfileRecord } from "./employee.repository";
 
 export class EmployeeController {
   private service = new EmployeeService();
@@ -69,13 +70,13 @@ export class EmployeeController {
 
       // Need target's basic identity info for authorization
       const authRepo = new AuthRepository();
-      const target = await authRepo.findEmployeeIdentityById(params.id);
+      const target = await authRepo.findEmployeeIdentityById(params.id) as EmployeeAuthProfileRecord | undefined;
 
       if (!target || target.deletedAt) {
         return next(new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND"));
       }
 
-      if (!canViewEmployee(actor, target as any)) {
+      if (!canViewEmployee(actor, target)) {
         return next(new ApiError(403, "You do not have permission to view this employee", "FORBIDDEN"));
       }
 
@@ -107,13 +108,13 @@ export class EmployeeController {
       const input = req.body as UpdateEmployeeInput;
 
       const authRepo = new AuthRepository();
-      const target = await authRepo.findEmployeeIdentityById(params.id);
+      const target = await authRepo.findEmployeeIdentityById(params.id) as EmployeeAuthProfileRecord | undefined;
 
       if (!target || target.deletedAt) {
         return next(new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND"));
       }
 
-      const allowedInput = filterAllowedUpdateFields(actor, target as any, input);
+      const allowedInput = filterAllowedUpdateFields(actor, target, input);
       if (Object.keys(allowedInput).length === 0) {
         return next(new ApiError(400, "No allowed fields provided for update", "NO_FIELDS_UPDATED"));
       }
@@ -131,13 +132,13 @@ export class EmployeeController {
       const params = req.params as unknown as EmployeeIdParams;
 
       const authRepo = new AuthRepository();
-      const target = await authRepo.findEmployeeIdentityById(params.id);
+      const target = await authRepo.findEmployeeIdentityById(params.id) as EmployeeAuthProfileRecord | undefined;
 
       if (!target || target.deletedAt) {
         return next(new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND"));
       }
 
-      assertActorCanDeleteEmployee(actor, target as any);
+      assertActorCanDeleteEmployee(actor, target);
 
       await this.service.softDelete(params.id, actor);
       sendResponse(res, 200, "Employee deleted successfully");
