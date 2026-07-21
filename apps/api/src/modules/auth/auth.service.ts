@@ -17,15 +17,15 @@ export class AuthService {
       throw new ApiError(401, "Invalid email or password", "INVALID_CREDENTIALS");
     }
 
-    // 3. Reject inactive employees
-    if (employee.status !== "active") {
-      throw new ApiError(403, "Account is inactive", "ACCOUNT_INACTIVE");
-    }
-
-    // 4. Compare password
+    // 3. Compare password BEFORE checking active status to prevent enumeration
     const isPasswordValid = await comparePassword(input.password, employee.passwordHash);
     if (!isPasswordValid) {
       throw new ApiError(401, "Invalid email or password", "INVALID_CREDENTIALS");
+    }
+
+    // 4. Reject inactive employees
+    if (employee.status !== "active") {
+      throw new ApiError(403, "Account is inactive", "ACCOUNT_INACTIVE");
     }
 
     // 5. Generate JWT

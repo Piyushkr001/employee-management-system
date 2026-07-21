@@ -3,6 +3,7 @@ import { employees } from "../../db/schema/employees";
 import { eq, and, isNull, ne, or, ilike, desc, asc, count, sql, inArray } from "drizzle-orm";
 import { EmployeeListQuery, UserRole } from "@empnexa/shared";
 import { ApiError } from "../../utils/api-error";
+import { mapPostgreSqlError } from "../../utils/db-error";
 import { EMPLOYEE_HIERARCHY_LOCK_KEY, SUPER_ADMIN_INVARIANT_LOCK_KEY } from "./employee.constants";
 import { assertActorCanUpdateEmployee } from "./employee.authorization";
 
@@ -172,13 +173,7 @@ export class EmployeeRepository {
     return record as unknown as EmployeeDetailRecord | undefined;
   }
 
-  async findManagerIdentityById(id: string): Promise<EmployeeAuthorizationRecord | undefined> {
-    const record = await db.query.employees.findFirst({
-      columns: { id: true, managerId: true, status: true, deletedAt: true },
-      where: and(eq(employees.id, id), isNull(employees.deletedAt)),
-    });
-    return record as unknown as EmployeeAuthorizationRecord | undefined;
-  }
+
 
   async createEmployeeTransactionSafe(data: NewEmployee, actor: { id: string; role: UserRole }): Promise<EmployeeMutationRecord> {
     return await db.transaction(async (tx) => {
@@ -222,18 +217,9 @@ export class EmployeeRepository {
         const [employee] = await tx.insert(employees).values(data).returning();
         return employee;
       } catch (error: any) {
-        if (error.code === '23505') {
-          if (error.message.includes('email') || error.detail?.includes('email')) {
-            throw new ApiError(409, "Email already exists", "EMAIL_ALREADY_EXISTS");
-          }
-          if (error.message.includes('employee_code') || error.detail?.includes('employee_code')) {
-            throw new ApiError(409, "Employee code already exists", "EMPLOYEE_CODE_ALREADY_EXISTS");
-          }
-          throw new ApiError(409, "A duplicate record exists", "DATABASE_CONFLICT");
-        }
-        if (error.code === '23514') {
-          throw new ApiError(400, "Negative salary is not allowed", "NEGATIVE_SALARY");
-        }
+        if (error instanceof ApiError) throw error;
+        const mappedError = mapPostgreSqlError(error);
+        if (mappedError) throw mappedError;
         throw error;
       }
     });
@@ -405,18 +391,8 @@ export class EmployeeRepository {
         return updatedEmployee;
       } catch (error: any) {
         if (error instanceof ApiError) throw error;
-        if (error.code === '23505') {
-          if (error.message.includes('email') || error.detail?.includes('email')) {
-            throw new ApiError(409, "Email already exists", "EMAIL_ALREADY_EXISTS");
-          }
-          if (error.message.includes('employee_code') || error.detail?.includes('employee_code')) {
-            throw new ApiError(409, "Employee code already exists", "EMPLOYEE_CODE_ALREADY_EXISTS");
-          }
-          throw new ApiError(409, "A duplicate record exists", "DATABASE_CONFLICT");
-        }
-        if (error.code === '23514') {
-          throw new ApiError(400, "Negative salary is not allowed", "NEGATIVE_SALARY");
-        }
+        const mappedError = mapPostgreSqlError(error);
+        if (mappedError) throw mappedError;
         throw error;
       }
     });
@@ -491,11 +467,12 @@ export class EmployeeRepository {
         }
       }
 
+      const now = new Date();
       const [deletedEmployee] = await tx
         .update(employees)
         .set({
-          deletedAt: new Date(),
-          updatedAt: new Date(),
+          deletedAt: now,
+          updatedAt: now,
         })
         .where(and(eq(employees.id, id), isNull(employees.deletedAt)))
         .returning();

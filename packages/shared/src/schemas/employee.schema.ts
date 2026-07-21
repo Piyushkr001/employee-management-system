@@ -110,9 +110,16 @@ export const createEmployeeSchema = z.object({
     (val) => (val === "" || val === undefined ? null : val),
     z.string().url().nullable().optional()
   ),
-});
+}).strict();
 
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;
+
+export type SelectedManagerDto = {
+  id: string;
+  name: string;
+  employeeCode: string;
+  designation: string;
+};
 
 export const updateEmployeeSchema = createEmployeeSchema.partial().omit({
   password: true,

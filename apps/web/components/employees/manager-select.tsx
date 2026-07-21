@@ -18,19 +18,19 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { employeeApi } from "@/features/employees/employee.api";
-import { ManagerOptionDto } from "@empnexa/shared";
+import { ManagerOptionDto, SelectedManagerDto } from "@empnexa/shared";
 
 interface ManagerSelectProps {
   value: string;
   onChange: (value: string) => void;
   excludeEmployeeId?: string;
   disabled?: boolean;
-  currentManager?: { id: string; name: string; employeeCode: string; designation: string } | null;
+  currentManager?: SelectedManagerDto | null;
 }
 
 export function ManagerSelect({ value, onChange, excludeEmployeeId, disabled, currentManager }: ManagerSelectProps) {
   const [open, setOpen] = useState(false);
-  const [managers, setManagers] = useState<ManagerOptionDto[]>(currentManager ? [currentManager as any] : []);
+  const [managers, setManagers] = useState<ManagerOptionDto[]>(currentManager ? [currentManager as ManagerOptionDto] : []);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

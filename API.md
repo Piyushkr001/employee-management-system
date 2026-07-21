@@ -44,10 +44,10 @@ Common error codes returned in the `error.code` payload:
 - `GET /api/auth/me`: Get the currently authenticated employee's profile.
 
 ### Employees
-- `GET /api/employees`: List employees with pagination, search, and filtering. (Protected)
-- `GET /api/employees/manager-options`: Fetch active employees eligible to be managers, avoiding circular reporting cycles. (Protected)
+- `GET /api/employees`: List employees with pagination, search, and filtering. (Protected, HR Manager & Super Admin only)
+- `GET /api/employees/manager-options`: Fetch active employees eligible to be managers, avoiding circular reporting cycles. (Protected, HR Manager & Super Admin only)
 - `POST /api/employees`: Create a new employee. (Requires `super_admin` or `hr_manager`)
-- `GET /api/employees/:id`: Get employee details by ID. (Protected)
+- `GET /api/employees/:id`: Get employee details by ID. (Protected, HR Manager & Super Admin only, or self)
 - `PUT /api/employees/:id`: Update employee details. (Protected, role-dependent restrictions)
 - `DELETE /api/employees/:id`: Soft delete an employee. (Requires `super_admin`)
 

@@ -58,9 +58,14 @@ export default async function EmployeesPage({
   const { employees, pagination } = res.data || { employees: [], pagination: { page: 1, total: 0, totalPages: 1 } };
 
   if (pagination.total > 0 && query.page > pagination.totalPages) {
-    const newSearchParams = new URLSearchParams(resolvedSearchParams as Record<string, string>);
-    newSearchParams.set("page", pagination.totalPages.toString());
-    redirect(`/employees?${newSearchParams.toString()}`);
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(validQuery)) {
+      if (value !== undefined && value !== "") {
+        params.set(key, String(value));
+      }
+    }
+    params.set("page", pagination.totalPages.toString());
+    redirect(`/employees?${params.toString()}`);
   }
 
   return (

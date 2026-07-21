@@ -128,9 +128,10 @@ describe("Soft Delete Integrity", () => {
     } else if (updateResult.status === "fulfilled" && deleteResult.status === "fulfilled") {
       // Update committed first, deletion committed after
       expect(finalRow?.phone).toBe("999999999");
-      // update timestamp shouldn't be later than deletion timestamp
+      // Because softDelete sets updatedAt and deletedAt together, 
+      // updatedAt should strictly equal deletedAt if deletion was the last thing.
       if (finalRow && finalRow.updatedAt && finalRow.deletedAt) {
-        expect(finalRow.updatedAt.getTime()).toBeLessThanOrEqual(finalRow.deletedAt.getTime());
+        expect(finalRow.updatedAt.getTime()).toBe(finalRow.deletedAt.getTime());
       }
     } else {
       throw new Error("Invalid concurrent outcome");

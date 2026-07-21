@@ -1,9 +1,9 @@
 import { employees } from "../../db/schema/employees";
 
-type EmployeeRecord = typeof employees.$inferSelect;
+import { EmployeeMutationRecord, EmployeeDetailRecord } from "./employee.repository";
 
-export function toEmployeeDto(employee: EmployeeRecord, includeSalary: boolean = false) {
-  const { passwordHash, deletedAt, salaryInPaise, ...rest } = employee;
+export function toEmployeeDto(employee: EmployeeMutationRecord | EmployeeDetailRecord, includeSalary: boolean = false) {
+  const { passwordHash, deletedAt, salaryInPaise, ...rest } = employee as any;
 
   const dto: any = { ...rest };
   
@@ -13,15 +13,15 @@ export function toEmployeeDto(employee: EmployeeRecord, includeSalary: boolean =
 
   // Format dates appropriately
   if (dto.joiningDate instanceof Date) {
-    dto.joiningDate = dto.joiningDate.toISOString().split("T")[0];
+    dto.joiningDate = (dto.joiningDate as Date).toISOString().split("T")[0];
   }
   
   if (dto.createdAt instanceof Date) {
-    dto.createdAt = dto.createdAt.toISOString();
+    dto.createdAt = (dto.createdAt as Date).toISOString();
   }
   
   if (dto.updatedAt instanceof Date) {
-    dto.updatedAt = dto.updatedAt.toISOString();
+    dto.updatedAt = (dto.updatedAt as Date).toISOString();
   }
 
   return dto;

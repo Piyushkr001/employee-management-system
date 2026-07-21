@@ -8,7 +8,7 @@ export const getAuthCookieOptions = (): CookieOptions => {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
+    sameSite: "lax",
     path: "/",
     maxAge,
   };
@@ -20,7 +20,7 @@ export const getClearAuthCookieOptions = (): CookieOptions => {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
+    sameSite: "lax",
     path: "/",
   };
 };

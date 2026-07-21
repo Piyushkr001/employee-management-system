@@ -1,4 +1,4 @@
-import { describe, it, expect, spyOn, beforeEach } from "bun:test";
+import { describe, it, expect, spyOn, beforeEach, afterEach, mock } from "bun:test";
 import request from "supertest";
 import app from "../../src/app";
 import { EmployeeRepository } from "../../src/modules/employees/employee.repository";
@@ -7,14 +7,49 @@ import { signAccessToken } from "../../src/utils/jwt";
 import { env } from "../../src/config/env";
 import { AuthRepository } from "../../src/modules/auth/auth.repository";
 
+const SUPER_ADMIN_ID = "11111111-1111-4111-8111-111111111111";
+const EMPLOYEE_ID = "33333333-3333-4333-8333-333333333333";
+
 describe("Employee API Integration Tests", () => {
   beforeEach(() => {
-    spyOn(AuthRepository.prototype, "findEmployeeIdentityById").mockImplementation(async (id) => {
-      if (id === "superadmin123") {
-        return { id: "superadmin123", email: "admin@empnexa.com", name: "Admin", role: "super_admin", status: "active", deletedAt: null } as any;
+    spyOn(AuthRepository.prototype, "findFullEmployeeById").mockImplementation(async (id) => {
+      if (id === SUPER_ADMIN_ID) {
+        return { 
+          id: SUPER_ADMIN_ID, 
+          email: "admin@empnexa.com", 
+          name: "Admin", 
+          role: "super_admin", 
+          status: "active", 
+          deletedAt: null,
+          employeeCode: "SA001",
+          phone: null,
+          department: "Administration",
+          designation: "Super Admin",
+          joiningDate: "2026-01-01",
+          managerId: null,
+          profileImageUrl: null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as any;
       }
-      if (id === "11111111-1111-1111-1111-111111111111") {
-        return { id: "11111111-1111-1111-1111-111111111111", email: "emp@empnexa.com", name: "Emp", role: "employee", status: "active", deletedAt: null } as any;
+      if (id === EMPLOYEE_ID) {
+        return { 
+          id: EMPLOYEE_ID, 
+          email: "emp@empnexa.com", 
+          name: "Emp", 
+          role: "employee", 
+          status: "active", 
+          deletedAt: null,
+          employeeCode: "EMP001",
+          phone: null,
+          department: "Operations",
+          designation: "Employee",
+          joiningDate: "2026-01-01",
+          managerId: null,
+          profileImageUrl: null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as any;
       }
       return null;
     });
@@ -28,7 +63,7 @@ describe("Employee API Integration Tests", () => {
     });
 
     spyOn(EmployeeRepository.prototype, "findById").mockImplementation(async (id) => {
-      if (id === "11111111-1111-1111-1111-111111111111") return { id: "11111111-1111-1111-1111-111111111111", name: "Employee 1", role: "employee" } as any;
+      if (id === EMPLOYEE_ID) return { id: EMPLOYEE_ID, name: "Employee 1", role: "employee" } as any;
       return undefined;
     });
 
@@ -36,7 +71,12 @@ describe("Employee API Integration Tests", () => {
       return { id: "2", ...data } as any;
     });
   });
-  const token = signAccessToken({ sub: "superadmin123", role: "super_admin", employeeCode: "SA001" });
+
+  afterEach(() => {
+    mock.restore();
+  });
+
+  const token = signAccessToken({ sub: SUPER_ADMIN_ID, role: "super_admin", employeeCode: "SA001" });
   const cookie = `${env.COOKIE_NAME}=${token}`;
 
   it("should block unauthenticated access to GET /api/employees", async () => {
@@ -82,11 +122,11 @@ describe("Employee API Integration Tests", () => {
 
   it("should get employee by id via GET /api/employees/:id", async () => {
     const res = await request(app)
-      .get("/api/employees/11111111-1111-1111-1111-111111111111")
+      .get(`/api/employees/${EMPLOYEE_ID}`)
       .set("Cookie", cookie);
 
     expect(res.status).toBe(200);
-    expect(res.body.data.id).toBe("11111111-1111-1111-1111-111111111111");
+    expect(res.body.data.id).toBe(EMPLOYEE_ID);
   });
 
   it("should create employee successfully via POST /api/employees", async () => {
@@ -115,11 +155,11 @@ describe("Employee API Integration Tests", () => {
       return { id, ...data } as any;
     });
 
-    const empToken = signAccessToken({ sub: "11111111-1111-1111-1111-111111111111", role: "employee", employeeCode: "E001" });
+    const empToken = signAccessToken({ sub: EMPLOYEE_ID, role: "employee", employeeCode: "E001" });
     const empCookie = `${env.COOKIE_NAME}=${empToken}`;
 
     const res = await request(app)
-      .put("/api/employees/11111111-1111-1111-1111-111111111111")
+      .put(`/api/employees/${EMPLOYEE_ID}`)
       .set("Cookie", empCookie)
       .set("X-EmpNexa-Request", "web")
       .send({ name: "Changed Name", salary: 99999 });
@@ -134,7 +174,7 @@ describe("Employee API Integration Tests", () => {
     });
 
     const res = await request(app)
-      .put("/api/employees/11111111-1111-1111-1111-111111111111")
+      .put(`/api/employees/${EMPLOYEE_ID}`)
       .set("Cookie", cookie)
       .set("X-EmpNexa-Request", "web")
       .send({ name: "Updated Name" });
@@ -145,11 +185,11 @@ describe("Employee API Integration Tests", () => {
 
   it("should delete employee successfully via DELETE /api/employees/:id", async () => {
     spyOn(EmployeeRepository.prototype, "softDelete").mockImplementation(async () => {
-      return { id: "11111111-1111-1111-1111-111111111111" } as any;
+      return { id: EMPLOYEE_ID } as any;
     });
 
     const res = await request(app)
-      .delete("/api/employees/11111111-1111-1111-1111-111111111111")
+      .delete(`/api/employees/${EMPLOYEE_ID}`)
       .set("Cookie", cookie)
       .set("Content-Type", "application/json")
       .set("X-EmpNexa-Request", "web");

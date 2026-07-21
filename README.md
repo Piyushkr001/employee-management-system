@@ -13,6 +13,7 @@ EmpNexa is a full-stack Employee Management System built with a modern stack pri
 - Role-based Access Control (Super Admin, HR Manager, Employee)
 - Full Employee CRUD operations with advanced table filtering, sorting, and pagination
 - Circular manager prevention and Last Active Super Admin protection
+- Transaction-safe architecture protecting against concurrent updates and soft deletions
 - Explicit backend field rejection for forbidden modifications
 - Standardized API responses and error handling
 

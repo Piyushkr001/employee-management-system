@@ -21,6 +21,7 @@ export default async function LoginPage(
 ) {
   const searchParams = await props.searchParams;
   const reason = searchParams?.reason;
+  const cleared = searchParams?.cleared;
   
   if (reason !== "inactive") {
     const user = await getCurrentUserCached();
@@ -34,9 +35,12 @@ export default async function LoginPage(
     }
   }
 
+  if (reason === "inactive" && cleared !== "1") {
+    return <InactiveSessionCleanup />;
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background lg:flex-row">
-      {reason === "inactive" && <InactiveSessionCleanup />}
       <AuthBrandPanel />
 
       <main className="flex flex-1 flex-col items-center justify-center p-6 sm:p-12">
@@ -61,7 +65,7 @@ export default async function LoginPage(
           </Link>
         </div>
 
-        {reason === "inactive" && (
+        {reason === "inactive" && cleared === "1" && (
           <Alert variant="destructive" className="mb-6 w-full max-w-sm">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Access Denied</AlertTitle>

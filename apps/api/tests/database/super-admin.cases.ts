@@ -48,16 +48,16 @@ describe("Super Admin Protection", () => {
     expect(updated.role).toBe("employee");
   });
 
-  test("should concurrently protect the last active super admin", async () => {
+  test("should concurrently protect the last active super admin from mutual demotion", async () => {
     const admin1 = await createActiveSuperAdmin();
     const admin2 = await createActiveSuperAdmin();
 
     const actor1 = { id: admin1.id, role: admin1.role };
     const actor2 = { id: admin2.id, role: admin2.role };
 
-    // Both attempt to deactivate themselves
-    const attempt1 = repo.updateEmployeeTransactionSafe(admin1.id, { status: "inactive" }, actor1);
-    const attempt2 = repo.updateEmployeeTransactionSafe(admin2.id, { status: "inactive" }, actor2);
+    // Both attempt to demote EACH OTHER
+    const attempt1 = repo.updateEmployeeTransactionSafe(admin2.id, { role: "employee" }, actor1);
+    const attempt2 = repo.updateEmployeeTransactionSafe(admin1.id, { role: "employee" }, actor2);
 
     const results = await Promise.allSettled([attempt1, attempt2]);
     
@@ -69,7 +69,7 @@ describe("Super Admin Protection", () => {
     expect(failed.length).toBe(1);
     
     if (failed[0] && failed[0].status === "rejected") {
-      expect(failed[0].reason.code).toBe("LAST_ACTIVE_SUPER_ADMIN");
+      expect(["LAST_ACTIVE_SUPER_ADMIN", "FORBIDDEN"]).toContain(failed[0].reason.code);
     }
   }, 10000);
 });

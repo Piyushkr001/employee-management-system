@@ -16,8 +16,8 @@ Administrative access for managing standard employees.
 
 ## Employee (`employee`)
 Standard access for regular staff.
-- Can view their own profile and view public details of other employees in the directory.
-- Can only update their own contact information (`phone`, `profileImageUrl`).
+- Can view and update their own profile and contact information (`phone`, `profileImageUrl`).
+- Cannot view the employee directory or organization hierarchy.
 - Cannot view sensitive information like salaries of other employees.
 
 ## Hierarchy Rules
