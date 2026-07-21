@@ -13,7 +13,7 @@
     "build": "bun run --filter '*' build",
     "lint": "bun run --filter '*' lint",
     "typecheck": "bun run --filter '*' typecheck",
-    "test": "bun run --cwd apps/api test",
+    "test": "bun run --filter '*' test",
     "test:db": "bun run --cwd apps/api test:db",
     "test:all": "bun run test && bun run test:db"
   },

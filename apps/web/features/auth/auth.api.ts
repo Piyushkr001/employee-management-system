@@ -23,7 +23,7 @@ export async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "/backend";
   const url = `${baseUrl.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
 
   const isMutation = ["POST", "PUT", "DELETE", "PATCH"].includes(options?.method?.toUpperCase() || "GET");

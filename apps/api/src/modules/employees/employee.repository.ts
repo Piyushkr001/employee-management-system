@@ -197,7 +197,6 @@ export class EmployeeRepository {
 
       const lockedActor = lockedEmployees.find(e => e.id === actor.id);
       if (!lockedActor) {
-         console.log("ACTOR NOT FOUND (create)!", { actorId: actor.id, lockedEmployees, employeeIdsToLock });
          throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
       }
 
@@ -254,13 +253,8 @@ export class EmployeeRepository {
 
       if (actor) {
         const lockedActor = lockedEmployees.find(e => e.id === actor.id);
-        if (!lockedActor) {
-           console.log("ACTOR NOT FOUND (update)!", { actorId: actor.id, lockedEmployees, employeeIdsToLock });
-           console.warn("Transactional actor validation failed", {
-             actorId: actor.id,
-             expectedRole: actor.role,
-           });
-           throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
+        if (!lockedActor || lockedActor.status !== "active" || lockedActor.deletedAt !== null) {
+           throw new ApiError(403, "Your account is not authorized", "FORBIDDEN");
         }
 
         if (!targetEmployee || targetEmployee.deletedAt !== null) {
@@ -268,15 +262,7 @@ export class EmployeeRepository {
         }
 
         // Authorization uses the locked state
-        assertActorCanUpdateEmployee(actor, targetEmployee, data as unknown as import("@empnexa/shared").UpdateEmployeeInput);
-        
-        if (actor.role === "hr_manager" && targetEmployee.role === "super_admin") {
-          throw new ApiError(403, "Cannot modify Super Admin", "CANNOT_MODIFY_SUPER_ADMIN");
-        }
-        
-        if (actor.role === "employee" && actor.id !== targetEmployee.id) {
-          throw new ApiError(403, "Cannot modify another employee", "FORBIDDEN");
-        }
+        assertActorCanUpdateEmployee({ id: lockedActor.id, role: lockedActor.role }, targetEmployee, data as unknown as import("@empnexa/shared").UpdateEmployeeInput);
       } else {
         if (!targetEmployee || targetEmployee.deletedAt !== null) {
           throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
@@ -418,7 +404,6 @@ export class EmployeeRepository {
 
       const lockedActor = lockedEmployees.find(e => e.id === actor.id);
       if (!lockedActor) {
-         console.log("ACTOR NOT FOUND (delete)!", { actorId: actor.id, lockedEmployees, employeeIdsToLock });
          throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
       }
 

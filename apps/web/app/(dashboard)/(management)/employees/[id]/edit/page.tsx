@@ -5,7 +5,7 @@ import { redirect, notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { EmployeeDto } from "@/features/employees/employee.api";
+import { EmployeeDto } from "@empnexa/shared";
 
 export default async function EditEmployeePage({
   params,

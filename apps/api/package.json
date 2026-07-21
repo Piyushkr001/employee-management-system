@@ -13,8 +13,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "bun run src/db/seed.ts",
-    "test": "bun test tests/auth.test.ts tests/integration",
-    "test:unit": "bun test tests/auth.test.ts",
+    "test": "bun test tests/auth.test.ts tests/unit tests/integration",
+    "test:unit": "bun test tests/auth.test.ts tests/unit",
     "test:http": "bun test tests/integration",
     "test:db": "NODE_ENV=test bun test --timeout 15000 --preload tests/database/preload.ts tests/database/all.database.test.ts",
     "test:all": "bun run test && bun run test:db"

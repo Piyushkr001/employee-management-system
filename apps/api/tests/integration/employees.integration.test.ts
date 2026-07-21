@@ -53,6 +53,11 @@ describe("Employee API Integration Tests", () => {
       }
       return null;
     });
+
+    spyOn(AuthRepository.prototype, "findEmployeeIdentityById").mockImplementation(async (id) => {
+      return AuthRepository.prototype.findFullEmployeeById(id);
+    });
+
     spyOn(EmployeeRepository.prototype, "getPaginated").mockImplementation(async () => {
       return {
         employees: [

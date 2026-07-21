@@ -5,21 +5,23 @@ interface DemoAccountsProps {
   disabled?: boolean
 }
 
+import { DEMO_ACCOUNTS } from "@empnexa/shared"
+
 const accounts = [
   {
     role: "Super Admin",
-    email: "admin@empnexa.com",
-    pass: "Admin@123",
+    email: DEMO_ACCOUNTS.SUPER_ADMIN.email,
+    pass: DEMO_ACCOUNTS.SUPER_ADMIN.password,
   },
   {
     role: "HR Manager",
-    email: "hr@empnexa.com",
-    pass: "HrManager@123",
+    email: DEMO_ACCOUNTS.HR_MANAGER.email,
+    pass: DEMO_ACCOUNTS.HR_MANAGER.password,
   },
   {
     role: "Employee",
-    email: "employee@empnexa.com",
-    pass: "Employee@123",
+    email: DEMO_ACCOUNTS.EMPLOYEE.email,
+    pass: DEMO_ACCOUNTS.EMPLOYEE.password,
   },
 ]
 

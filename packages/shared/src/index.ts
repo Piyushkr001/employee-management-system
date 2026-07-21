@@ -1,4 +1,5 @@
 export * from "./constants/roles";
+export * from "./constants/demo-accounts";
 export * from "./schemas/auth.schema";
 
 export * from "./constants/employee";

@@ -1,12 +1,6 @@
 import { fetchApi } from "../auth/auth.api";
-import { EmployeeListQuery, CreateEmployeeInput, UpdateEmployeeInput, AuthenticatedUserDto, SelectedManagerDto, ManagerOptionDto } from "@empnexa/shared";
-
-// The mapped Employee response from the API for a single employee
-export type EmployeeDto = Omit<AuthenticatedUserDto, "id"> & {
-  id: string;
-  salary?: number;
-  manager?: SelectedManagerDto | null;
-};
+import { EmployeeListQuery, CreateEmployeeInput, UpdateEmployeeInput, EmployeeDto, ManagerOptionDto } from "@empnexa/shared";
+export type { EmployeeListQuery, CreateEmployeeInput, UpdateEmployeeInput, EmployeeDto, ManagerOptionDto };
 
 export type EmployeePaginatedResponse = {
   employees: EmployeeDto[];
@@ -43,14 +37,14 @@ export const employeeApi = {
     if (search) {
       searchParams.append("search", search);
     }
-    return fetchApi<{ managers: Pick<EmployeeDto, "id" | "employeeCode" | "name" | "designation" | "department" | "status">[] }>(
+    return fetchApi<{ managers: ManagerOptionDto[] }>(
       `/employees/manager-options?${searchParams.toString()}`,
       { method: "GET", signal }
     );
   },
 
   getManagerOptionById: async (id: string, signal?: AbortSignal) => {
-    return fetchApi<Pick<EmployeeDto, "id" | "employeeCode" | "name" | "designation" | "department" | "status">>(
+    return fetchApi<ManagerOptionDto>(
       `/employees/manager-options/${id}`,
       { method: "GET", signal }
     );

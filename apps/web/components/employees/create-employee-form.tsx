@@ -40,6 +40,14 @@ export function CreateEmployeeForm({ currentUserRole }: CreateEmployeeFormProps)
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const form = useForm<CreateEmployeeFormInput>({
     resolver: zodResolver(createEmployeeSchema),
     defaultValues: {
@@ -53,7 +61,7 @@ export function CreateEmployeeForm({ currentUserRole }: CreateEmployeeFormProps)
       salary: 0,
       status: "active",
       role: "employee",
-      joiningDate: new Date().toISOString().split("T")[0],
+      joiningDate: getLocalDateString(),
       profileImageUrl: "",
       managerId: "",
     },

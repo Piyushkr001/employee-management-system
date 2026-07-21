@@ -65,5 +65,5 @@ Common error codes returned in the `error.code` payload:
 - Cookie name is shared between frontend and backend. Backend uses `COOKIE_NAME`, frontend uses `AUTH_COOKIE_NAME` environment variable (defaults to `empnexa_token`). The values must match identically.
 - `employeeCode` is strictly immutable after creation.
 - Hierarchy operations (assigning managers, soft deleting) are protected by a Postgres advisory transaction lock (`EMPLOYEE_HIERARCHY_LOCK_KEY`) to prevent concurrent circular reporting and race conditions.
-- Super Admin demotion/deactivation checks are protected via `FOR UPDATE` row-level locks ensuring at least one active Super Admin always exists.
+- Super Admin demotion/deactivation and general updates/deletions are strictly authorized via a locked-actor architecture. The system uses a `FOR UPDATE` row-level lock on the actor performing the action to validate the absolute latest actor state (e.g. active, not demoted).
 - `API_INTERNAL_URL` is mandatory in production for Server Components to resolve backend absolute paths. Browser components use `NEXT_PUBLIC_API_URL=/backend`.

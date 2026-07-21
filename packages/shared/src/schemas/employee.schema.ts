@@ -158,3 +158,22 @@ export type ManagerOptionDto = SelectedManagerDto & {
   department: string;
   status: EmployeeStatus;
 };
+
+export type EmployeeDto = {
+  id: string;
+  employeeCode: string;
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  designation: string;
+  salary?: number;
+  joiningDate: string;
+  status: EmployeeStatus;
+  role: "super_admin" | "hr_manager" | "employee";
+  managerId: string | null;
+  profileImageUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+  manager?: SelectedManagerDto | null;
+};

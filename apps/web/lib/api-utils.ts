@@ -9,5 +9,5 @@ export function getInternalApiUrl(): string {
     throw new Error("API_INTERNAL_URL is required in production");
   }
 
-  return "http://localhost:5000/api";
+  return "http://localhost:5001/api";
 }

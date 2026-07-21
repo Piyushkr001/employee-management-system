@@ -16,6 +16,7 @@ describe("Database Integration Tests (Serial)", () => {
   require("./transactional-creation.cases.ts");
   require("./hierarchy.cases.ts");
   require("./soft-delete.cases.ts");
+  require("./authorization.cases.ts");
   require("./super-admin.cases.ts");
   require("./auth-db.cases.ts");
   require("./http-postgres.cases.ts");

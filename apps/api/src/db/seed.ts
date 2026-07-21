@@ -2,39 +2,28 @@ import { db, client } from "./index";
 import { employees } from "./schema/employees";
 import { hashPassword } from "@/utils/password";
 
-function assertSafeSeedDatabase(databaseUrl: string): void {
-  const parsed = new URL(databaseUrl);
-  const databaseName = parsed.pathname.replace(/^\/+/, "");
-  const looksSafe = /(^|[_-])(dev|development|local|test)($|[_-])/i.test(databaseName);
-  const explicitlyAllowed = process.env.ALLOW_DEMO_SEED === "true";
-
-  if (!looksSafe && !explicitlyAllowed) {
-    throw new Error(`Refusing to seed unsafe database: ${databaseName}`);
-  }
-}
+import { assertSafeSeedEnvironment } from "./seed-safety";
+import { DEMO_ACCOUNTS } from "@empnexa/shared";
 
 async function seed() {
   console.log("🌱 Starting database seeding...");
 
-  const isProduction = process.env.NODE_ENV === "production";
-  const allowDemoSeed = process.env.ALLOW_DEMO_SEED === "true";
-
-  if (isProduction && !allowDemoSeed) {
-    throw new Error("Refusing to seed demo data in production");
-  }
-
-  assertSafeSeedDatabase(process.env.DATABASE_URL || "");
+  assertSafeSeedEnvironment({
+    nodeEnv: process.env.NODE_ENV,
+    allowDemoSeed: process.env.ALLOW_DEMO_SEED,
+    databaseUrl: process.env.DATABASE_URL,
+  });
 
   try {
-    const adminPassword = await hashPassword("Admin@123");
-    const hrPassword = await hashPassword("HrManager@123");
-    const empPassword = await hashPassword("Employee@123");
+    const adminPassword = await hashPassword(DEMO_ACCOUNTS.SUPER_ADMIN.password);
+    const hrPassword = await hashPassword(DEMO_ACCOUNTS.HR_MANAGER.password);
+    const empPassword = await hashPassword(DEMO_ACCOUNTS.EMPLOYEE.password);
 
     // 1. Create top level (Super Admin)
     const superAdminData = {
       employeeCode: "EMP101",
       name: "Super Admin",
-      email: "admin@empnexa.com",
+      email: DEMO_ACCOUNTS.SUPER_ADMIN.email,
       passwordHash: adminPassword,
       phone: "+1234567890",
       department: "Administration",
@@ -42,7 +31,7 @@ async function seed() {
       salaryInPaise: 15000000, 
       joiningDate: "2026-01-01",
       status: "active" as const,
-      role: "super_admin" as const,
+      role: DEMO_ACCOUNTS.SUPER_ADMIN.role,
     };
     const superAdminRes = await db.insert(employees).values(superAdminData).onConflictDoUpdate({ 
       target: employees.email, 
@@ -54,7 +43,7 @@ async function seed() {
     const hrManagerData = {
       employeeCode: "EMP102",
       name: "HR Manager",
-      email: "hr@empnexa.com",
+      email: DEMO_ACCOUNTS.HR_MANAGER.email,
       passwordHash: hrPassword,
       phone: "+1234567891",
       department: "Human Resources",
@@ -62,7 +51,7 @@ async function seed() {
       salaryInPaise: 10000000, 
       joiningDate: "2026-01-15",
       status: "active" as const,
-      role: "hr_manager" as const,
+      role: DEMO_ACCOUNTS.HR_MANAGER.role,
       managerId: superAdminId,
     };
     const hrManagerRes = await db.insert(employees).values(hrManagerData).onConflictDoUpdate({ 
@@ -111,13 +100,13 @@ async function seed() {
     }).returning({ id: employees.id });
     const prodManagerId = prodManagerRes[0].id;
 
-    const defaultPassword = await hashPassword("Welcome@123");
+    const defaultPassword = await hashPassword(DEMO_ACCOUNTS.EMPLOYEE.password);
 
     // 3. Create reportees
     const reportees = [
       { employeeCode: "EMP105", name: "HR Executive", email: "hrexec@empnexa.com", department: "Human Resources", designation: "HR Executive", role: "employee" as const, managerId: hrManagerId },
       { employeeCode: "EMP106", name: "Recruiter", email: "recruiter@empnexa.com", department: "Human Resources", designation: "Recruiter", role: "employee" as const, managerId: hrManagerId },
-      { employeeCode: "EMP107", name: "Frontend Developer", email: "frontend@empnexa.com", department: "Engineering", designation: "Frontend Developer", role: "employee" as const, managerId: engLeadId },
+      { employeeCode: "EMP107", name: "Frontend Developer", email: DEMO_ACCOUNTS.EMPLOYEE.email, department: "Engineering", designation: "Frontend Developer", role: DEMO_ACCOUNTS.EMPLOYEE.role, managerId: engLeadId },
       { employeeCode: "EMP108", name: "Backend Developer", email: "backend@empnexa.com", department: "Engineering", designation: "Backend Developer", role: "employee" as const, managerId: engLeadId },
       { employeeCode: "EMP109", name: "Product Designer", email: "designer@empnexa.com", department: "Product", designation: "Product Designer", role: "employee" as const, managerId: prodManagerId },
       { employeeCode: "EMP110", name: "Business Analyst", email: "ba@empnexa.com", department: "Product", designation: "Business Analyst", role: "employee" as const, managerId: prodManagerId },

@@ -1,13 +1,14 @@
 import { EmployeeMutationRecord, EmployeeDetailRecord, EmployeeListRecord } from "./employee.repository";
+import { EmployeeDto } from "@empnexa/shared";
 
 export function toEmployeeDto(
   employee: EmployeeMutationRecord | EmployeeDetailRecord | EmployeeListRecord, 
   includeSalary: boolean = false
-) {
+): EmployeeDto {
   const emp = employee as Partial<EmployeeDetailRecord & EmployeeMutationRecord>;
   const { passwordHash, deletedAt, salaryInPaise, ...rest } = emp;
 
-  const dto: Record<string, unknown> = { ...rest };
+  const dto: any = { ...rest };
   
   if (includeSalary && salaryInPaise !== undefined) {
     dto.salary = salaryInPaise / 100;
@@ -26,5 +27,5 @@ export function toEmployeeDto(
     dto.updatedAt = (dto.updatedAt as Date).toISOString();
   }
 
-  return dto;
+  return dto as EmployeeDto;
 }

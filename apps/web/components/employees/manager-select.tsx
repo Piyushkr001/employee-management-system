@@ -49,7 +49,7 @@ export function ManagerSelect({ value, onChange, excludeEmployeeId, disabled, cu
       try {
         const res = await employeeApi.getManagerOptions(excludeEmployeeId, search, controller.signal);
         if (currentRequestId === requestIdRef.current) {
-          setManagers((res as any).data?.managers || []);
+          setManagers(res.data?.managers || []);
         }
       } catch (err: any) {
         if (err.name === 'AbortError') return;
