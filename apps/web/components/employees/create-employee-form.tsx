@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { 
   createEmployeeSchema, 
-  updateEmployeeSchema,
-  CreateEmployeeInput, 
-  UpdateEmployeeInput, 
   UserRole 
 } from "@empnexa/shared";
-import { employeeApi, EmployeeDto } from "@/features/employees/employee.api";
+import { employeeApi } from "@/features/employees/employee.api";
+import { z } from "zod";
+
+type CreateEmployeeFormInput = z.input<typeof createEmployeeSchema>;
+type CreateEmployeePayload = z.output<typeof createEmployeeSchema>;
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,84 +32,44 @@ import { PasswordInput } from "../auth/password-input";
 import { ManagerSelect } from "./manager-select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-type EmployeeFormProps = {
+interface CreateEmployeeFormProps {
   currentUserRole: UserRole;
-} & (
-  | { mode: "create"; employee?: never }
-  | { mode: "edit"; employee: EmployeeDto }
-);
+}
 
-export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormProps) {
+export function CreateEmployeeForm({ currentUserRole }: CreateEmployeeFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const isEditing = mode === "edit";
 
-  const defaultValues = isEditing ? {
-    name: employee.name,
-    email: employee.email,
-    phone: employee.phone,
-    department: employee.department,
-    designation: employee.designation,
-    salary: employee.salary || 0,
-    status: employee.status,
-    role: employee.role,
-    joiningDate: employee.joiningDate,
-    profileImageUrl: employee.profileImageUrl || "",
-    managerId: employee.managerId || "",
-  } : {
-    name: "",
-    email: "",
-    password: "",
-    employeeCode: "",
-    phone: "",
-    department: "",
-    designation: "",
-    salary: 0,
-    status: "active" as const,
-    role: "employee" as const,
-    joiningDate: new Date().toISOString().split("T")[0],
-    profileImageUrl: "",
-    managerId: "",
-  };
-
-  type FormType = CreateEmployeeInput & UpdateEmployeeInput;
-
-  const form = useForm<FormType>({
-    resolver: zodResolver(isEditing ? updateEmployeeSchema : createEmployeeSchema) as any,
-    defaultValues: defaultValues as any,
+  const form = useForm<CreateEmployeeFormInput>({
+    resolver: zodResolver(createEmployeeSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      employeeCode: "",
+      phone: "",
+      department: "",
+      designation: "",
+      salary: 0,
+      status: "active",
+      role: "employee",
+      joiningDate: new Date().toISOString().split("T")[0],
+      profileImageUrl: "",
+      managerId: "",
+    },
   });
 
-  const { dirtyFields } = form.formState;
-
-  const onSubmit = async (data: FormType) => {
+  const onSubmit = async (data: CreateEmployeeFormInput) => {
     setIsLoading(true);
     try {
-      if (isEditing) {
-        const payload: Partial<UpdateEmployeeInput> = {};
-        Object.keys(dirtyFields).forEach(key => {
-          if (key !== "password" && key !== "employeeCode") {
-            payload[key as keyof UpdateEmployeeInput] = data[key as keyof FormType] as any;
-          }
-        });
-
-        if (Object.keys(payload).length === 0) {
-          toast.info("No changes to save");
-          setIsLoading(false);
-          return;
-        }
-        
-        await employeeApi.update(employee.id, payload);
-        toast.success("Employee updated successfully");
-      } else {
-        await employeeApi.create(data as CreateEmployeeInput);
-        toast.success("Employee created successfully");
-      }
-      router.push("/employees");
+      await employeeApi.create(data as CreateEmployeePayload);
+      toast.success("Employee created successfully");
+      router.replace("/employees");
       router.refresh();
-    } catch (error: any) {
+    } catch (error: Error | any) {
       if (error.fieldErrors) {
         Object.entries(error.fieldErrors).forEach(([field, messages]) => {
-          form.setError(field as any, { message: (messages as string[])[0] });
+          form.setError(field as keyof CreateEmployeeFormInput, { message: (messages as string[])[0] });
         });
       } else {
         toast.error(error.message || "Something went wrong");
@@ -146,38 +107,29 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
             )}
           />
 
-          {!isEditing ? (
-            <FormField
-              control={form.control}
-              name="employeeCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Employee Code</FormLabel>
-                  <FormControl><Input placeholder="EMP001" disabled={isLoading} {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          ) : (
-            <div className="space-y-2">
-              <FormLabel>Employee Code</FormLabel>
-              <Input value={employee?.employeeCode} disabled readOnly className="bg-muted" />
-            </div>
-          )}
+          <FormField
+            control={form.control}
+            name="employeeCode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Employee Code</FormLabel>
+                <FormControl><Input placeholder="EMP001" disabled={isLoading} {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          {!isEditing && (
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Temporary Password</FormLabel>
-                  <FormControl><PasswordInput placeholder="••••••••" disabled={isLoading} {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Temporary Password</FormLabel>
+                <FormControl><PasswordInput placeholder="••••••••" disabled={isLoading} {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}
@@ -305,9 +257,7 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
                 <ManagerSelect 
                   value={field.value || "none"}
                   onChange={field.onChange}
-                  excludeEmployeeId={isEditing ? employee?.id : undefined}
                   disabled={isLoading}
-                  currentManager={isEditing ? employee?.manager : undefined}
                 />
                 <FormMessage />
               </FormItem>
@@ -346,7 +296,7 @@ export function EmployeeForm({ mode, employee, currentUserRole }: EmployeeFormPr
           </Button>
           <Button type="submit" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? "Save Changes" : "Create Employee"}
+            Create Employee
           </Button>
         </div>
       </form>

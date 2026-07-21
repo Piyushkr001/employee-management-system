@@ -10,14 +10,15 @@ import { UserRole } from "@empnexa/shared";
 interface EmployeeActionsProps {
   employee: EmployeeDto;
   currentUserRole: UserRole;
+  currentUserId: string;
   onDelete: (employee: EmployeeDto) => void;
 }
 
-export function EmployeeActions({ employee, currentUserRole, onDelete }: EmployeeActionsProps) {
+export function EmployeeActions({ employee, currentUserRole, currentUserId, onDelete }: EmployeeActionsProps) {
   const router = useRouter();
 
   const canEdit = currentUserRole === "super_admin" || (currentUserRole === "hr_manager" && employee.role !== "super_admin");
-  const canDelete = currentUserRole === "super_admin";
+  const canDelete = currentUserRole === "super_admin" && currentUserId !== employee.id;
 
   return (
     <DropdownMenu>

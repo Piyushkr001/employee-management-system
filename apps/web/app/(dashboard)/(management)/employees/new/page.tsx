@@ -1,5 +1,5 @@
 import { getCurrentUserCached } from "@/features/auth/auth.server";
-import { EmployeeForm } from "@/components/employees/employee-form";
+import { CreateEmployeeForm } from "@/components/employees/create-employee-form";
 import { redirect } from "next/navigation";
 
 export default async function NewEmployeePage() {
@@ -15,7 +15,7 @@ export default async function NewEmployeePage() {
         <p className="text-muted-foreground">Fill out the form below to create a new employee profile.</p>
       </div>
 
-      <EmployeeForm mode="create" currentUserRole={user.role} />
+      <CreateEmployeeForm currentUserRole={user.role} />
     </div>
   );
 }

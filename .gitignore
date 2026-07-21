@@ -11,6 +11,7 @@ coverage/
 apps/*/.env
 apps/*/.env.*
 !apps/*/.env.example
+!apps/*/.env.test.example
 
 packages/*/.env
 packages/*/.env.*

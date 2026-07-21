@@ -83,7 +83,8 @@ export default async function EmployeesPage({
 
       <EmployeeTable 
         employees={employees} 
-        currentUserRole={user.role} 
+        currentUserRole={user.role}
+        currentUserId={user.id}
         pagination={pagination as PaginationMetadata} 
       />
     </div>

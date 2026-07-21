@@ -1,6 +1,6 @@
 import { getCurrentUserCached } from "@/features/auth/auth.server";
 import { getEmployeeByIdServer } from "@/features/employees/employee.server";
-import { EmployeeForm } from "@/components/employees/employee-form";
+import { EditEmployeeForm } from "@/components/employees/edit-employee-form";
 import { redirect, notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -52,7 +52,7 @@ export default async function EditEmployeePage({
         </div>
       </div>
 
-      <EmployeeForm employee={employee} mode="edit" currentUserRole={user.role} />
+      <EditEmployeeForm employee={employee} currentUserRole={user.role} />
     </div>
   );
 }

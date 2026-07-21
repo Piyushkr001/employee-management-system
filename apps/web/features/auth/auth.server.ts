@@ -29,18 +29,19 @@ export const getCurrentUserServer = async (): Promise<AuthenticatedUserDto | nul
   if (res.status === 401) {
     return null;
   }
+  const data: ApiResponse<{ user: AuthenticatedUserDto }> = await res.json();
+  
   if (res.status === 403) {
+    if (data.error?.code === "ACCOUNT_INACTIVE") {
+      redirect("/login?reason=inactive");
+    }
     redirect("/unauthorized");
-  }
-  if (res.status >= 500) {
-    throw new Error("Backend service is unavailable");
   }
 
   if (!res.ok) {
     return null;
   }
 
-  const data: ApiResponse<{ user: AuthenticatedUserDto }> = await res.json();
   return data.data?.user || null;
 }
 

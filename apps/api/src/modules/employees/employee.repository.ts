@@ -88,7 +88,7 @@ export class EmployeeRepository {
           throw new ApiError(422, "Selected manager does not exist", "INVALID_MANAGER");
         }
 
-        if (lockedManager.status !== "active") {
+        if (lockedManager.status !== "active" || lockedManager.deletedAt !== null) {
           throw new ApiError(422, "Selected manager is inactive", "INVALID_MANAGER");
         }
       }
@@ -137,7 +137,7 @@ export class EmployeeRepository {
            throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
         }
 
-        if (!targetEmployee) {
+        if (!targetEmployee || targetEmployee.deletedAt !== null) {
           throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
         }
 
@@ -152,7 +152,7 @@ export class EmployeeRepository {
           throw new ApiError(403, "Cannot modify another employee", "FORBIDDEN");
         }
       } else {
-        if (!targetEmployee) {
+        if (!targetEmployee || targetEmployee.deletedAt !== null) {
           throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
         }
       }
@@ -253,8 +253,12 @@ export class EmployeeRepository {
       const [updatedEmployee] = await tx
         .update(employees)
         .set({ ...data, updatedAt: new Date() })
-        .where(eq(employees.id, id))
+        .where(and(eq(employees.id, id), isNull(employees.deletedAt)))
         .returning();
+
+      if (!updatedEmployee) {
+        throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
+      }
 
       return updatedEmployee;
     });
@@ -292,7 +296,7 @@ export class EmployeeRepository {
       }
 
       const targetEmployee = lockedEmployees.find(e => e.id === id);
-      if (!targetEmployee) {
+      if (!targetEmployee || targetEmployee.deletedAt !== null) {
         throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
       }
 
@@ -340,8 +344,12 @@ export class EmployeeRepository {
           deletedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(employees.id, id))
+        .where(and(eq(employees.id, id), isNull(employees.deletedAt)))
         .returning();
+
+      if (!deletedEmployee) {
+        throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
+      }
 
       return deletedEmployee;
     });
@@ -410,7 +418,7 @@ export class EmployeeRepository {
     const normalizedPage = Math.min(Math.max(page, 1), totalPages);
     const offset = (normalizedPage - 1) * limit;
 
-    const data = await db.select(employeeListSelection).from(employees).where(whereClause).orderBy(orderByClause).limit(limit).offset(offset);
+    const data = await db.select(employeeListSelection).from(employees).where(whereClause).orderBy(orderByClause, asc(employees.id)).limit(limit).offset(offset);
 
     return {
       employees: data,

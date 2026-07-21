@@ -123,12 +123,39 @@ describe("HTTP to PostgreSQL Integration", () => {
     expect(response.body.error.code).toBe("EMPLOYEE_NOT_FOUND");
   });
 
-  test("Final administrator: Delete final active Super Admin", async () => {
+  test("Super Admin: Self-deletion returns 403", async () => {
     const admin = await createActiveSuperAdmin();
     const adminToken = signAccessToken({ sub: admin.id, role: admin.role, employeeCode: admin.employeeCode });
 
     const response = await setHeaders(request(app).delete(`/api/employees/${admin.id}`), adminToken)
       .send({});
+
+    expect(response.status).toBe(403);
+    // Based on standard error definitions, self-delete returns 403 FORBIDDEN
+    expect(response.body.error.code).toBe("FORBIDDEN");
+  });
+
+  test("Final administrator: Deactivate final active Super Admin", async () => {
+    const admin = await createActiveSuperAdmin();
+    const adminToken = signAccessToken({ sub: admin.id, role: admin.role, employeeCode: admin.employeeCode });
+
+    const response = await setHeaders(request(app).put(`/api/employees/${admin.id}`), adminToken)
+      .send({
+        status: "inactive"
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe("LAST_ACTIVE_SUPER_ADMIN");
+  });
+
+  test("Final administrator: Demote final active Super Admin", async () => {
+    const admin = await createActiveSuperAdmin();
+    const adminToken = signAccessToken({ sub: admin.id, role: admin.role, employeeCode: admin.employeeCode });
+
+    const response = await setHeaders(request(app).put(`/api/employees/${admin.id}`), adminToken)
+      .send({
+        role: "employee"
+      });
 
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe("LAST_ACTIVE_SUPER_ADMIN");

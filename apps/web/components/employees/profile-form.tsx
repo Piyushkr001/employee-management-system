@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { profileUpdateSchema, ProfileUpdateInput } from "@empnexa/shared";
+import { profileUpdateSchema } from "@empnexa/shared";
+import { z } from "zod";
+
+type ProfileFormInput = z.input<typeof profileUpdateSchema>;
+type ProfilePayload = z.output<typeof profileUpdateSchema>;
 import { employeeApi } from "@/features/employees/employee.api";
 import { useRouter } from "next/navigation";
 
@@ -22,15 +26,15 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ProfileFormProps {
-  initialData: any;
+  initialData: { id: string; phone?: string | null; profileImageUrl?: string | null };
 }
 
 export function ProfileForm({ initialData }: ProfileFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<ProfileUpdateInput>({
-    resolver: zodResolver(profileUpdateSchema) as any,
+  const form = useForm<ProfileFormInput>({
+    resolver: zodResolver(profileUpdateSchema),
     defaultValues: {
       phone: initialData.phone || "",
       profileImageUrl: initialData.profileImageUrl || "",
@@ -39,12 +43,12 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   
   const { dirtyFields } = form.formState;
 
-  const onSubmit = async (data: ProfileUpdateInput) => {
+  const onSubmit = async (data: ProfileFormInput) => {
     setIsLoading(true);
     try {
-      const payload: Partial<ProfileUpdateInput> = {};
+      const payload: Partial<ProfileFormInput> = {};
       Object.keys(dirtyFields).forEach(key => {
-        payload[key as keyof ProfileUpdateInput] = data[key as keyof ProfileUpdateInput] as any;
+        Object.assign(payload, { [key]: data[key as keyof ProfileFormInput] });
       });
 
       if (Object.keys(payload).length === 0) {
@@ -53,10 +57,10 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         return;
       }
       
-      await employeeApi.update(initialData.id, payload as any);
+      await employeeApi.update(initialData.id, payload as Partial<ProfilePayload>);
       toast.success("Profile updated successfully");
       router.refresh();
-    } catch (error: any) {
+    } catch (error: Error | any) {
       toast.error(error.message || "Failed to update profile");
     } finally {
       setIsLoading(false);

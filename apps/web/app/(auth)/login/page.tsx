@@ -5,13 +5,29 @@ import { redirect } from "next/navigation"
 import { LoginForm } from "@/components/auth/login-form"
 import { AuthBrandPanel } from "@/components/auth/auth-brand-panel"
 import { getCurrentUserCached } from "@/features/auth/auth.server"
+import { cookies } from "next/headers"
+import { AUTH_COOKIE_NAME } from "@/lib/auth-config"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Login | EmpNexa",
   description: "Sign in to your EmpNexa workspace.",
 }
 
-export default async function LoginPage() {
+export default async function LoginPage(
+  props: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+  }
+) {
+  const searchParams = await props.searchParams;
+  const reason = searchParams?.reason;
+  
+  if (reason === "inactive") {
+    const cookieStore = await cookies();
+    cookieStore.delete(AUTH_COOKIE_NAME);
+  }
+
   const user = await getCurrentUserCached();
 
   if (user?.role === "employee") {
@@ -48,6 +64,15 @@ export default async function LoginPage() {
           </Link>
         </div>
 
+        {reason === "inactive" && (
+          <Alert variant="destructive" className="mb-6 w-full max-w-sm">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Access Denied</AlertTitle>
+            <AlertDescription>
+              Your account is inactive. Contact your administrator.
+            </AlertDescription>
+          </Alert>
+        )}
         <LoginForm />
       </main>
     </div>

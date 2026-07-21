@@ -12,6 +12,7 @@ import { DeleteEmployeeDialog } from "./delete-employee-dialog";
 interface EmployeeTableProps {
   employees: EmployeeDto[];
   currentUserRole: UserRole;
+  currentUserId: string;
   pagination: {
     page: number;
     total: number;
@@ -19,7 +20,7 @@ interface EmployeeTableProps {
   };
 }
 
-export function EmployeeTable({ employees, currentUserRole, pagination }: EmployeeTableProps) {
+export function EmployeeTable({ employees, currentUserRole, currentUserId, pagination }: EmployeeTableProps) {
   const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeDto | null>(null);
 
   return (
@@ -81,6 +82,7 @@ export function EmployeeTable({ employees, currentUserRole, pagination }: Employ
                       <EmployeeActions 
                         employee={employee} 
                         currentUserRole={currentUserRole}
+                        currentUserId={currentUserId}
                         onDelete={setEmployeeToDelete}
                       />
                     </td>
