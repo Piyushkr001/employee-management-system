@@ -26,7 +26,7 @@ async function seed() {
     };
     const superAdminRes = await db.insert(employees).values(superAdminData).onConflictDoUpdate({ 
       target: employees.email, 
-      set: { ...superAdminData, employeeCode: undefined, updatedAt: new Date() } 
+      set: { ...superAdminData, deletedAt: null, updatedAt: new Date() } 
     }).returning({ id: employees.id });
     const superAdminId = superAdminRes[0].id;
 
@@ -47,7 +47,7 @@ async function seed() {
     };
     const hrManagerRes = await db.insert(employees).values(hrManagerData).onConflictDoUpdate({ 
       target: employees.email, 
-      set: { ...hrManagerData, employeeCode: undefined, updatedAt: new Date() } 
+      set: { ...hrManagerData, deletedAt: null, updatedAt: new Date() } 
     }).returning({ id: employees.id });
     const hrManagerId = hrManagerRes[0].id;
 
@@ -67,7 +67,7 @@ async function seed() {
     };
     const engLeadRes = await db.insert(employees).values(engLeadData).onConflictDoUpdate({ 
       target: employees.email, 
-      set: { ...engLeadData, employeeCode: undefined, updatedAt: new Date() } 
+      set: { ...engLeadData, deletedAt: null, updatedAt: new Date() } 
     }).returning({ id: employees.id });
     const engLeadId = engLeadRes[0].id;
 
@@ -87,7 +87,7 @@ async function seed() {
     };
     const prodManagerRes = await db.insert(employees).values(prodManagerData).onConflictDoUpdate({ 
       target: employees.email, 
-      set: { ...prodManagerData, employeeCode: undefined, updatedAt: new Date() } 
+      set: { ...prodManagerData, deletedAt: null, updatedAt: new Date() } 
     }).returning({ id: employees.id });
     const prodManagerId = prodManagerRes[0].id;
 
@@ -121,7 +121,7 @@ async function seed() {
       };
       await db.insert(employees).values(empData).onConflictDoUpdate({
         target: employees.email,
-        set: { ...empData, employeeCode: undefined, updatedAt: new Date() }
+        set: { ...empData, deletedAt: null, updatedAt: new Date() }
       });
     }
 

@@ -54,6 +54,7 @@ Common error codes returned in the `error.code` payload:
 ## Security
 
 - Authentication uses HTTP-only cookies.
+- Frontend leverages a Next.js API proxy (`/backend/*`) to ensure all API calls are Same-Origin, eliminating CORS preflight overhead and enhancing cookie security.
 - Cookie name is shared between frontend and backend via `AUTH_COOKIE_NAME` environment variable (defaults to `empnexa_token`).
 - `employeeCode` is strictly immutable after creation.
 - Hierarchy operations (assigning managers, soft deleting) are protected by a Postgres advisory transaction lock (`EMPLOYEE_HIERARCHY_LOCK_KEY`) to prevent concurrent circular reporting and race conditions.

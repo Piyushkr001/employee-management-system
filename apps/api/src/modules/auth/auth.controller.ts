@@ -21,12 +21,10 @@ export class AuthController {
   };
 
   getCurrentUser = async (req: Request, res: Response) => {
-    const userId = req.user?.id;
-    if (!userId) {
+    if (!req.user) {
       return sendResponse(res, 401, "Not authenticated", undefined, { code: "UNAUTHENTICATED" });
     }
 
-    const user = await this.service.getCurrentUser(userId);
-    sendResponse(res, 200, "Current user retrieved", { user });
+    sendResponse(res, 200, "Current user retrieved", { user: req.user });
   };
 }

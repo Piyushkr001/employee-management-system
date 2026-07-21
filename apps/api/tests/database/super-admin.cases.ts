@@ -33,7 +33,7 @@ describe("Super Admin Protection", () => {
     const actor = { id: admin.id, role: admin.role };
     await expect(
       repo.softDelete(admin.id, actor)
-    ).rejects.toThrow("Cannot remove the last active Super Admin");
+    ).rejects.toThrow("You cannot delete your own account");
   });
 
   test("should allow demoting an inactive super admin even if they are the only one", async () => {

@@ -5,8 +5,7 @@ import { redirect } from "next/navigation"
 import { LoginForm } from "@/components/auth/login-form"
 import { AuthBrandPanel } from "@/components/auth/auth-brand-panel"
 import { getCurrentUserCached } from "@/features/auth/auth.server"
-import { cookies } from "next/headers"
-import { AUTH_COOKIE_NAME } from "@/lib/auth-config"
+import { InactiveSessionCleanup } from "@/components/auth/inactive-session-cleanup"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 
@@ -23,23 +22,21 @@ export default async function LoginPage(
   const searchParams = await props.searchParams;
   const reason = searchParams?.reason;
   
-  if (reason === "inactive") {
-    const cookieStore = await cookies();
-    cookieStore.delete(AUTH_COOKIE_NAME);
-  }
+  if (reason !== "inactive") {
+    const user = await getCurrentUserCached();
 
-  const user = await getCurrentUserCached();
+    if (user?.role === "employee") {
+      redirect("/profile");
+    }
 
-  if (user?.role === "employee") {
-    redirect("/profile");
-  }
-
-  if (user) {
-    redirect("/dashboard");
+    if (user) {
+      redirect("/dashboard");
+    }
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-background lg:flex-row">
+      {reason === "inactive" && <InactiveSessionCleanup />}
       <AuthBrandPanel />
 
       <main className="flex flex-1 flex-col items-center justify-center p-6 sm:p-12">

@@ -58,6 +58,30 @@ describe("Transactional Creation", () => {
     await expect(promise).rejects.toThrow("Selected manager is inactive");
   });
 
+  test("should rollback creation if manager is soft-deleted", async () => {
+    const admin = await createActiveSuperAdmin();
+    const actor = { id: admin.id, role: admin.role };
+    const manager = await createTestEmployee();
+    await repo.softDelete(manager.id, actor);
+
+    const promise = repo.createEmployeeTransactionSafe({
+      employeeCode: "EMP-ROLL3",
+      name: "Test",
+      email: "roll3@test.com",
+      passwordHash: "hash",
+      phone: "123",
+      department: "Dept",
+      designation: "Desig",
+      salaryInPaise: 1000,
+      joiningDate: "2026-01-01",
+      status: "active",
+      role: "employee",
+      managerId: manager.id
+    }, actor);
+
+    await expect(promise).rejects.toThrow("Selected manager is inactive");
+  });
+
   test("should successfully create employee with active manager", async () => {
     const admin = await createActiveSuperAdmin();
     const actor = { id: admin.id, role: admin.role };

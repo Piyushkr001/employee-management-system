@@ -8,21 +8,149 @@ import { assertActorCanUpdateEmployee } from "./employee.authorization";
 
 type NewEmployee = typeof employees.$inferInsert;
 
+export type EmployeeAuthorizationRecord = {
+  id: string;
+  role: UserRole;
+  status: "active" | "inactive";
+  deletedAt: Date | null;
+};
+
+export type EmployeeAuthProfileRecord = {
+  id: string;
+  role: UserRole;
+  status: "active" | "inactive";
+  deletedAt: Date | null;
+  employeeCode: string;
+  name: string;
+  email: string;
+  profileImageUrl: string | null;
+};
+
+export type EmployeeListRecord = {
+  id: string;
+  employeeCode: string;
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  designation: string;
+  salaryInPaise: number;
+  joiningDate: string;
+  status: "active" | "inactive";
+  role: UserRole;
+  managerId: string | null;
+  profileImageUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type EmployeeDetailRecord = EmployeeListRecord & {
+  manager: {
+    id: string;
+    employeeCode: string;
+    name: string;
+    designation: string;
+  } | null;
+};
+
+export type EmployeeMutationRecord = typeof employees.$inferSelect;
+
+export type ManagerOptionRecord = {
+  id: string;
+  employeeCode: string;
+  name: string;
+  designation: string;
+  department: string;
+  status: "active" | "inactive";
+};
+
+export function assertLockedActorCanCreateEmployee(
+  actor: EmployeeAuthorizationRecord,
+  input: Partial<NewEmployee>,
+): void {
+  if (
+    actor.status !== "active" ||
+    actor.deletedAt !== null
+  ) {
+    throw new ApiError(
+      403,
+      "Your account is not authorized to create employees",
+      "FORBIDDEN",
+    );
+  }
+
+  if (
+    actor.role !== "super_admin" &&
+    actor.role !== "hr_manager"
+  ) {
+    throw new ApiError(
+      403,
+      "Not authorized to create employees",
+      "FORBIDDEN",
+    );
+  }
+
+  if (
+    actor.role === "hr_manager" &&
+    input.role === "super_admin"
+  ) {
+    throw new ApiError(
+      403,
+      "HR Managers cannot create Super Admin accounts",
+      "FORBIDDEN_ROLE_ASSIGNMENT",
+    );
+  }
+}
+
+export function assertLockedActorCanDeleteEmployee(
+  actor: EmployeeAuthorizationRecord,
+  target: EmployeeAuthorizationRecord,
+): void {
+  if (
+    actor.status !== "active" ||
+    actor.deletedAt !== null
+  ) {
+    throw new ApiError(
+      403,
+      "Your account is not authorized",
+      "FORBIDDEN",
+    );
+  }
+
+  if (
+    actor.role !== "super_admin"
+  ) {
+    throw new ApiError(
+      403,
+      "Only Super Admins can delete employees",
+      "FORBIDDEN",
+    );
+  }
+
+  if (actor.id === target.id) {
+    throw new ApiError(
+      403,
+      "You cannot delete your own account",
+      "FORBIDDEN",
+    );
+  }
+}
+
 export class EmployeeRepository {
-  async findByEmail(email: string) {
+  async findByEmail(email: string): Promise<EmployeeMutationRecord | undefined> {
     return db.query.employees.findFirst({
       where: and(eq(employees.email, email), isNull(employees.deletedAt)),
     });
   }
 
-  async findByEmployeeCode(employeeCode: string) {
+  async findByEmployeeCode(employeeCode: string): Promise<EmployeeMutationRecord | undefined> {
     return db.query.employees.findFirst({
       where: and(eq(employees.employeeCode, employeeCode), isNull(employees.deletedAt)),
     });
   }
 
-  async findById(id: string) {
-    return db.query.employees.findFirst({
+  async findById(id: string): Promise<EmployeeDetailRecord | undefined> {
+    const record = await db.query.employees.findFirst({
       where: and(
         eq(employees.id, id),
         isNull(employees.deletedAt)
@@ -41,16 +169,18 @@ export class EmployeeRepository {
         }
       }
     });
+    return record as unknown as EmployeeDetailRecord | undefined;
   }
 
-  async findManagerIdentityById(id: string) {
-    return db.query.employees.findFirst({
+  async findManagerIdentityById(id: string): Promise<EmployeeAuthorizationRecord | undefined> {
+    const record = await db.query.employees.findFirst({
       columns: { id: true, managerId: true, status: true, deletedAt: true },
       where: and(eq(employees.id, id), isNull(employees.deletedAt)),
     });
+    return record as unknown as EmployeeAuthorizationRecord | undefined;
   }
 
-  async createEmployeeTransactionSafe(data: NewEmployee, actor: { id: string; role: UserRole }) {
+  async createEmployeeTransactionSafe(data: NewEmployee, actor: { id: string; role: UserRole }): Promise<EmployeeMutationRecord> {
     return await db.transaction(async (tx) => {
       if (data.managerId) {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
@@ -71,16 +201,11 @@ export class EmployeeRepository {
         .for("update");
 
       const lockedActor = lockedEmployees.find(e => e.id === actor.id);
-      if (!lockedActor || lockedActor.status !== "active" || lockedActor.deletedAt || lockedActor.role !== actor.role) {
-         console.warn("Transactional actor validation failed", {
-           actorId: actor.id,
-           expectedRole: actor.role,
-           currentRole: lockedActor?.role,
-           currentStatus: lockedActor?.status,
-           isDeleted: lockedActor?.deletedAt != null,
-         });
+      if (!lockedActor) {
          throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
       }
+
+      assertLockedActorCanCreateEmployee(lockedActor, data);
 
       if (data.managerId) {
         const lockedManager = lockedEmployees.find(e => e.id === data.managerId);
@@ -93,12 +218,28 @@ export class EmployeeRepository {
         }
       }
 
-      const [employee] = await tx.insert(employees).values(data).returning();
-      return employee;
+      try {
+        const [employee] = await tx.insert(employees).values(data).returning();
+        return employee;
+      } catch (error: any) {
+        if (error.code === '23505') {
+          if (error.message.includes('email') || error.detail?.includes('email')) {
+            throw new ApiError(409, "Email already exists", "EMAIL_ALREADY_EXISTS");
+          }
+          if (error.message.includes('employee_code') || error.detail?.includes('employee_code')) {
+            throw new ApiError(409, "Employee code already exists", "EMPLOYEE_CODE_ALREADY_EXISTS");
+          }
+          throw new ApiError(409, "A duplicate record exists", "DATABASE_CONFLICT");
+        }
+        if (error.code === '23514') {
+          throw new ApiError(400, "Negative salary is not allowed", "NEGATIVE_SALARY");
+        }
+        throw error;
+      }
     });
   }
 
-  async updateEmployeeTransactionSafe(id: string, data: Partial<NewEmployee>, actor?: { id: string; role: UserRole }) {
+  async updateEmployeeTransactionSafe(id: string, data: Partial<NewEmployee>, actor?: { id: string; role: UserRole }): Promise<EmployeeMutationRecord> {
     return await db.transaction(async (tx) => {
       if (data.role !== undefined || data.status !== undefined) {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(${SUPER_ADMIN_INVARIANT_LOCK_KEY})`);
@@ -250,21 +391,38 @@ export class EmployeeRepository {
       }
 
       // Apply update
-      const [updatedEmployee] = await tx
-        .update(employees)
-        .set({ ...data, updatedAt: new Date() })
-        .where(and(eq(employees.id, id), isNull(employees.deletedAt)))
-        .returning();
+      try {
+        const [updatedEmployee] = await tx
+          .update(employees)
+          .set({ ...data, updatedAt: new Date() })
+          .where(and(eq(employees.id, id), isNull(employees.deletedAt)))
+          .returning();
 
-      if (!updatedEmployee) {
-        throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
+        if (!updatedEmployee) {
+          throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
+        }
+
+        return updatedEmployee;
+      } catch (error: any) {
+        if (error instanceof ApiError) throw error;
+        if (error.code === '23505') {
+          if (error.message.includes('email') || error.detail?.includes('email')) {
+            throw new ApiError(409, "Email already exists", "EMAIL_ALREADY_EXISTS");
+          }
+          if (error.message.includes('employee_code') || error.detail?.includes('employee_code')) {
+            throw new ApiError(409, "Employee code already exists", "EMPLOYEE_CODE_ALREADY_EXISTS");
+          }
+          throw new ApiError(409, "A duplicate record exists", "DATABASE_CONFLICT");
+        }
+        if (error.code === '23514') {
+          throw new ApiError(400, "Negative salary is not allowed", "NEGATIVE_SALARY");
+        }
+        throw error;
       }
-
-      return updatedEmployee;
     });
   }
 
-  async softDelete(id: string, actor: { id: string; role: UserRole }) {
+  async softDelete(id: string, actor: { id: string; role: UserRole }): Promise<EmployeeMutationRecord> {
     return await db.transaction(async (tx) => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${SUPER_ADMIN_INVARIANT_LOCK_KEY})`);
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${EMPLOYEE_HIERARCHY_LOCK_KEY})`);
@@ -284,14 +442,7 @@ export class EmployeeRepository {
         .for("update");
 
       const lockedActor = lockedEmployees.find(e => e.id === actor.id);
-      if (!lockedActor || lockedActor.status !== "active" || lockedActor.deletedAt || lockedActor.role !== actor.role) {
-         console.warn("Transactional actor validation failed", {
-           actorId: actor.id,
-           expectedRole: actor.role,
-           currentRole: lockedActor?.role,
-           currentStatus: lockedActor?.status,
-           isDeleted: lockedActor?.deletedAt != null,
-         });
+      if (!lockedActor) {
          throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
       }
 
@@ -299,6 +450,8 @@ export class EmployeeRepository {
       if (!targetEmployee || targetEmployee.deletedAt !== null) {
         throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
       }
+
+      assertLockedActorCanDeleteEmployee(lockedActor, targetEmployee);
 
       // Check reportees
       const reportees = await tx
@@ -372,8 +525,8 @@ export class EmployeeRepository {
         filters.push(searchCondition);
       }
     }
-    if (department) filters.push(eq(employees.department, department));
-    if (designation) filters.push(eq(employees.designation, designation));
+    if (department) filters.push(ilike(employees.department, department));
+    if (designation) filters.push(ilike(employees.designation, designation));
     if (status) filters.push(eq(employees.status, status as any));
     if (role) filters.push(eq(employees.role, role as any));
     if (managerId) filters.push(eq(employees.managerId, managerId));

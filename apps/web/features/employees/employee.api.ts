@@ -35,7 +35,7 @@ export const employeeApi = {
       }
     });
 
-    return fetchApi<{ employees: EmployeeDto[], pagination: any }>(`/employees?${searchParams.toString()}`, {
+    return fetchApi<EmployeePaginatedResponse>(`/employees?${searchParams.toString()}`, {
       method: "GET",
     });
   },
@@ -82,7 +82,7 @@ export const employeeApi = {
   },
 
   softDelete: async (id: string) => {
-    return fetchApi<{ success: boolean }>(`/employees/${id}`, {
+    return fetchApi<void>(`/employees/${id}`, {
       method: "DELETE",
     });
   },

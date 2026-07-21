@@ -1,9 +1,35 @@
+"use client";
+
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export default function UnauthorizedPage() {
+  const router = useRouter();
+
+  const handleClearSession = async () => {
+    try {
+      await fetch("/backend/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-EmpNexa-Request": "web",
+        },
+      });
+    } catch {
+      // Ignore
+    }
+    
+    await fetch("/api/auth/clear-session", {
+      method: "POST",
+      credentials: "include",
+    });
+    
+    router.push("/login");
+  };
   return (
     <div className="flex min-h-[80vh] flex-col items-center justify-center p-6 text-center">
       <div className="flex size-20 items-center justify-center rounded-full bg-destructive/10">
@@ -17,6 +43,9 @@ export default function UnauthorizedPage() {
         <Link href="/profile" className={cn(buttonVariants())}>
           Return to Profile
         </Link>
+        <Button variant="outline" onClick={handleClearSession}>
+          Clear Session & Logout
+        </Button>
       </div>
     </div>
   );

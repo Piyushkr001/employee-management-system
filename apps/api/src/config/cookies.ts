@@ -3,7 +3,7 @@ import { env } from "./env";
 
 export const getAuthCookieOptions = (): CookieOptions => {
   const isProduction = env.NODE_ENV === "production";
-  const maxAge = parseInt(env.JWT_EXPIRES_IN_SECONDS as unknown as string, 10) * 1000;
+  const maxAge = env.JWT_EXPIRES_IN_SECONDS * 1000;
 
   return {
     httpOnly: true,

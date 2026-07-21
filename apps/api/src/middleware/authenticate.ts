@@ -3,19 +3,13 @@ import { ApiError } from "../utils/api-error";
 import { verifyAccessToken } from "../utils/jwt";
 import { env } from "../config/env";
 import { AuthRepository } from "../modules/auth/auth.repository";
-import { UserRole, EmployeeStatus } from "@empnexa/shared";
+import { AuthenticatedUserDto, UserRole, EmployeeStatus } from "@empnexa/shared";
+import { toAuthenticatedUserDto } from "../modules/auth/auth.mapper";
 
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        id: string;
-        employeeCode: string;
-        name: string;
-        email: string;
-        role: UserRole;
-        status: EmployeeStatus;
-      };
+      user?: AuthenticatedUserDto;
     }
   }
 }
@@ -36,7 +30,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
   try {
     const authRepository = new AuthRepository();
-    const user = await authRepository.findEmployeeIdentityById(payload.sub);
+    const user = await authRepository.findFullEmployeeById(payload.sub);
 
     if (!user || user.deletedAt) {
       return next(new ApiError(401, "Authentication session is invalid", "INVALID_SESSION"));
@@ -46,14 +40,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       return next(new ApiError(403, "Employee account is inactive", "ACCOUNT_INACTIVE"));
     }
 
-    req.user = {
-      id: user.id,
-      employeeCode: user.employeeCode,
-      name: user.name,
-      email: user.email,
-      role: user.role as UserRole,
-      status: user.status as EmployeeStatus,
-    };
+    req.user = toAuthenticatedUserDto(user as any);
 
     next();
   } catch (error) {

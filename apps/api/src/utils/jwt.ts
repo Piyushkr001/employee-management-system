@@ -10,7 +10,7 @@ export type JwtPayload = {
 
 export function signAccessToken(payload: JwtPayload): string {
   return jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: parseInt(env.JWT_EXPIRES_IN_SECONDS as unknown as string, 10),
+    expiresIn: env.JWT_EXPIRES_IN_SECONDS,
     issuer: "empnexa-api",
     audience: "empnexa-web",
   });

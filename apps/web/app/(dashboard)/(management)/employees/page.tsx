@@ -9,10 +9,12 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+type EmployeeSearchParams = Record<string, string | string[] | undefined>;
+
 export default async function EmployeesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
+  searchParams: Promise<EmployeeSearchParams>;
 }) {
   const resolvedSearchParams = await searchParams;
   const user = await getCurrentUserCached();

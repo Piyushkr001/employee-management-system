@@ -91,7 +91,7 @@ describe("Soft Delete Integrity", () => {
   test("concurrent update vs employee deletion", async () => {
     const admin = await createActiveSuperAdmin();
     const actor = { id: admin.id, role: admin.role };
-    const emp = await createTestEmployee();
+    const emp = await createTestEmployee({ phone: "111111111" });
 
     // Concurrent attempt to update employee while deleting it
     const attempt1 = repo.updateEmployeeTransactionSafe(emp.id, { phone: "999999999" }, actor);
@@ -99,13 +99,8 @@ describe("Soft Delete Integrity", () => {
 
     const results = await Promise.allSettled([attempt1, attempt2]);
     
-    const succeeded = results.filter(r => r.status === "fulfilled");
-    const failed = results.filter(r => r.status === "rejected");
-
-    // Only one outcome is valid:
-    // If delete wins first, update throws EMPLOYEE_NOT_FOUND
-    // If update wins first, delete succeeds afterwards.
-    // In BOTH valid scenarios, the final row MUST be deleted.
+    const updateResult = results[0];
+    const deleteResult = results[1];
 
     const { testDb } = require("./test-db");
     const { employees } = require("../../src/db/schema/employees");
@@ -117,6 +112,29 @@ describe("Soft Delete Integrity", () => {
 
     expect(finalRow).toBeDefined();
     expect(finalRow?.deletedAt).not.toBeNull();
+
+    // Assert no deadlock code 40P01
+    if (updateResult.status === "rejected") {
+       expect(updateResult.reason.message).not.toContain("40P01");
+    }
+    if (deleteResult.status === "rejected") {
+       expect(deleteResult.reason.message).not.toContain("40P01");
+    }
+
+    if (deleteResult.status === "fulfilled" && updateResult.status === "rejected") {
+      // Deletion committed first, update failed
+      expect(updateResult.reason.code).toBe("EMPLOYEE_NOT_FOUND");
+      expect(finalRow?.phone).toBe("111111111"); // field remains unchanged
+    } else if (updateResult.status === "fulfilled" && deleteResult.status === "fulfilled") {
+      // Update committed first, deletion committed after
+      expect(finalRow?.phone).toBe("999999999");
+      // update timestamp shouldn't be later than deletion timestamp
+      if (finalRow && finalRow.updatedAt && finalRow.deletedAt) {
+        expect(finalRow.updatedAt.getTime()).toBeLessThanOrEqual(finalRow.deletedAt.getTime());
+      }
+    } else {
+      throw new Error("Invalid concurrent outcome");
+    }
   }, 10000);
 
   test("should prevent update to deleted employee", async () => {
