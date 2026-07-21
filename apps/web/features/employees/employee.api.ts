@@ -1,16 +1,11 @@
 import { fetchApi } from "../auth/auth.api";
-import { EmployeeListQuery, CreateEmployeeInput, UpdateEmployeeInput, AuthenticatedUserDto } from "@empnexa/shared";
+import { EmployeeListQuery, CreateEmployeeInput, UpdateEmployeeInput, AuthenticatedUserDto, SelectedManagerDto, ManagerOptionDto } from "@empnexa/shared";
 
 // The mapped Employee response from the API for a single employee
 export type EmployeeDto = Omit<AuthenticatedUserDto, "id"> & {
   id: string;
   salary?: number;
-  manager?: {
-    id: string;
-    employeeCode: string;
-    name: string;
-    designation: string;
-  };
+  manager?: SelectedManagerDto | null;
 };
 
 export type EmployeePaginatedResponse = {

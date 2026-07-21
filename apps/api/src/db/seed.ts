@@ -2,8 +2,28 @@ import { db, client } from "./index";
 import { employees } from "./schema/employees";
 import { hashPassword } from "@/utils/password";
 
+function assertSafeSeedDatabase(databaseUrl: string): void {
+  const parsed = new URL(databaseUrl);
+  const databaseName = parsed.pathname.replace(/^\/+/, "");
+  const looksSafe = /(^|[_-])(dev|development|local|test)($|[_-])/i.test(databaseName);
+  const explicitlyAllowed = process.env.ALLOW_DEMO_SEED === "true";
+
+  if (!looksSafe && !explicitlyAllowed) {
+    throw new Error(`Refusing to seed unsafe database: ${databaseName}`);
+  }
+}
+
 async function seed() {
   console.log("🌱 Starting database seeding...");
+
+  const isProduction = process.env.NODE_ENV === "production";
+  const allowDemoSeed = process.env.ALLOW_DEMO_SEED === "true";
+
+  if (isProduction && !allowDemoSeed) {
+    throw new Error("Refusing to seed demo data in production");
+  }
+
+  assertSafeSeedDatabase(process.env.DATABASE_URL || "");
 
   try {
     const adminPassword = await hashPassword("Admin@123");

@@ -197,6 +197,7 @@ export class EmployeeRepository {
 
       const lockedActor = lockedEmployees.find(e => e.id === actor.id);
       if (!lockedActor) {
+         console.log("ACTOR NOT FOUND (create)!", { actorId: actor.id, lockedEmployees, employeeIdsToLock });
          throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
       }
 
@@ -253,13 +254,11 @@ export class EmployeeRepository {
 
       if (actor) {
         const lockedActor = lockedEmployees.find(e => e.id === actor.id);
-        if (!lockedActor || lockedActor.status !== "active" || lockedActor.deletedAt || lockedActor.role !== actor.role) {
+        if (!lockedActor) {
+           console.log("ACTOR NOT FOUND (update)!", { actorId: actor.id, lockedEmployees, employeeIdsToLock });
            console.warn("Transactional actor validation failed", {
              actorId: actor.id,
              expectedRole: actor.role,
-             currentRole: lockedActor?.role,
-             currentStatus: lockedActor?.status,
-             isDeleted: lockedActor?.deletedAt != null,
            });
            throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
         }
@@ -419,6 +418,7 @@ export class EmployeeRepository {
 
       const lockedActor = lockedEmployees.find(e => e.id === actor.id);
       if (!lockedActor) {
+         console.log("ACTOR NOT FOUND (delete)!", { actorId: actor.id, lockedEmployees, employeeIdsToLock });
          throw new ApiError(403, "Actor context invalid", "FORBIDDEN");
       }
 

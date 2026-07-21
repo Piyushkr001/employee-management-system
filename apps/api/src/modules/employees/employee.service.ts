@@ -43,53 +43,37 @@ export class EmployeeService {
   }
 
   async create(input: CreateEmployeeInput, actor: { id: string; role: UserRole }) {
-    try {
-      const hashedPassword = await hashPassword(input.password);
-      const salaryInPaise = Math.round(input.salary * 100);
+    const hashedPassword = await hashPassword(input.password);
+    const salaryInPaise = Math.round(input.salary * 100);
 
-      const { password, salary, ...restInput } = input;
+    const { password, salary, ...restInput } = input;
 
-      const newEmployeeData: NewEmployeeInput = {
-        ...restInput,
-        passwordHash: hashedPassword,
-        salaryInPaise,
-        joiningDate: input.joiningDate,
-        profileImageUrl: input.profileImageUrl ?? null,
-        managerId: input.managerId ?? null,
-      };
+    const newEmployeeData: NewEmployeeInput = {
+      ...restInput,
+      passwordHash: hashedPassword,
+      salaryInPaise,
+      joiningDate: input.joiningDate,
+      profileImageUrl: input.profileImageUrl ?? null,
+      managerId: input.managerId ?? null,
+    };
 
       const newEmployee = await this.repository.createEmployeeTransactionSafe(newEmployeeData, actor);
 
       return toEmployeeDto(newEmployee, true);
-    } catch (error: unknown) {
-      const dbError = mapPostgreSqlError(error);
-      if (dbError) {
-        throw dbError;
-      }
-      throw error;
-    }
   }
 
   async update(id: string, input: UpdateEmployeeInput, actor: { id: string; role: UserRole }) {
-    try {
-      const updateData: Partial<NewEmployeeInput> = { ...input } as any;
+    const updateData: Partial<NewEmployeeInput> = { ...input } as any;
 
-      if (input.salary !== undefined) {
-        updateData.salaryInPaise = Math.round(input.salary * 100);
-        delete (updateData as any).salary;
-      }
+    if (input.salary !== undefined) {
+      updateData.salaryInPaise = Math.round(input.salary * 100);
+      delete (updateData as any).salary;
+    }
 
       const updatedEmployee = await this.repository.updateEmployeeTransactionSafe(id, updateData, actor);
       
       const includeSalary = actor.role === "super_admin" || actor.role === "hr_manager";
       return toEmployeeDto(updatedEmployee, includeSalary);
-    } catch (error: unknown) {
-      const dbError = mapPostgreSqlError(error);
-      if (dbError) {
-        throw dbError;
-      }
-      throw error;
-    }
   }
 
   async softDelete(id: string, actor: { id: string; role: UserRole }) {

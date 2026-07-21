@@ -36,27 +36,11 @@ export class AuthService {
     });
 
     // 6. Map to DTO (ensures salary and passwordHash are excluded)
-    // We explicitly exclude the passwordHash to cast to the full record type for mapper if needed,
-    // though findEmployeeForLoginByEmail excludes salary, we can safely cast it.
-    const userDto = toAuthenticatedUserDto(employee as any);
+    const userDto = toAuthenticatedUserDto(employee);
 
     return {
       token,
       user: userDto,
     };
-  }
-
-  async getCurrentUser(userId: string) {
-    const employee = await this.repository.findFullEmployeeById(userId);
-
-    if (!employee) {
-      throw new ApiError(401, "User not found", "USER_NOT_FOUND");
-    }
-
-    if (employee.status !== "active") {
-      throw new ApiError(403, "Account is inactive", "ACCOUNT_INACTIVE");
-    }
-
-    return toAuthenticatedUserDto(employee as any);
   }
 }

@@ -49,8 +49,8 @@ export function DeleteEmployeeDialog({ employee, onOpenChange }: DeleteEmployeeD
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This will soft-delete <strong>{employee?.name}</strong> ({employee?.employeeCode}). 
-            They will lose login access immediately and be hidden from active lists.
-            This action can be reverted by database administrators.
+            This employee will be hidden from active records and will no longer be able to sign in.
+            Soft-deleted email addresses and Employee Codes cannot currently be reused.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

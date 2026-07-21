@@ -9,7 +9,7 @@ export const authorize = (...allowedRoles: UserRole[]) => {
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      return next(new ApiError(403, "Not authorized to access this resource"));
+      return next(new ApiError(403, "Not authorized to access this resource", "FORBIDDEN"));
     }
 
     next();

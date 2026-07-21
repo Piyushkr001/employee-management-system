@@ -154,11 +154,7 @@ export type PaginatedResponse<T> = {
   pagination: PaginationMetadata;
 };
 
-export type ManagerOptionDto = {
-  id: string;
-  employeeCode: string;
-  name: string;
-  designation: string;
+export type ManagerOptionDto = SelectedManagerDto & {
   department: string;
-  status: "active" | "inactive";
+  status: EmployeeStatus;
 };

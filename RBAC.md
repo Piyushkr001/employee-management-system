@@ -22,7 +22,7 @@ Standard access for regular staff.
 
 ## Hierarchy Rules
 - A user cannot be assigned a manager who reports to them (Circular Manager Prevention).
-- An employee cannot manage an HR manager or Super Admin.
+- System access role and organizational reporting hierarchy are independent concepts.
 
 ## Immutability & Rejection Rules
 - `employeeCode` is immutable after creation and cannot be updated by any role.

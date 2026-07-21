@@ -6,7 +6,8 @@ let employeeCounter = 0;
 
 export async function createTestEmployee(overrides: Partial<typeof employees.$inferInsert> = {}) {
   const uniqueId = Date.now().toString() + Math.random().toString().slice(2, 6) + (++employeeCounter);
-  const passwordHash = overrides.passwordHash || await hashPassword("Test@123");
+  // Use a pre-computed bcrypt hash of "Test@123" to save 100-200ms per fixture creation
+  const passwordHash = overrides.passwordHash || "$2a$10$C82OQ9I30B.1B50i5B23fuz7jQj6J1s5.R8aW0/cM8j.19G3V0C/C";
 
   const [employee] = await testDb.insert(employees).values({
     employeeCode: `EMP${uniqueId}`,

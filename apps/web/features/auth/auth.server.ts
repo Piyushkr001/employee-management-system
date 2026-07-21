@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { AuthenticatedUserDto, ApiResponse } from "@empnexa/shared";
 import { cache } from "react";
 import { AUTH_COOKIE_NAME } from "@/lib/auth-config";
-
+import { getInternalApiUrl } from "@/lib/api-utils";
 export const getCurrentUserServer = async (): Promise<AuthenticatedUserDto | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
@@ -12,13 +12,7 @@ export const getCurrentUserServer = async (): Promise<AuthenticatedUserDto | nul
     return null;
   }
 
-  const internalApiUrl = process.env.API_INTERNAL_URL;
-
-  if (process.env.NODE_ENV === "production" && !internalApiUrl) {
-    throw new Error("API_INTERNAL_URL is required in production");
-  }
-
-  const baseUrl = internalApiUrl || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  const baseUrl = getInternalApiUrl().replace(/\/+$/, "");
   
   let res: Response;
   try {

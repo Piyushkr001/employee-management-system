@@ -51,7 +51,8 @@ Common error codes returned in the `error.code` payload:
 
 ### Employees
 - `GET /api/employees`: List employees with pagination, search, and filtering. (Protected, HR Manager & Super Admin only)
-- `GET /api/employees/manager-options/:id`: Fetch active employees eligible to be managers for a specific employee. (Note: This endpoint excludes inactive, deleted and the target employee, but does *not* recursively remove all circular-reporting candidates—circular assignments are fully rejected during the update transaction). (Protected, HR Manager & Super Admin only)
+- `GET /api/employees/manager-options`: Searches active, non-deleted manager candidates. (Note: does *not* recursively remove all circular-reporting candidates—circular assignments are fully rejected during the update transaction). (Protected, HR Manager & Super Admin only)
+- `GET /api/employees/manager-options/:id`: Resolves one non-deleted Employee label by ID. May be used to restore a selected filter label. (Protected, HR Manager & Super Admin only)
 - `POST /api/employees`: Create a new employee. (Requires `super_admin` or `hr_manager`)
 - `GET /api/employees/:id`: Get employee details by ID. (Protected, HR Manager & Super Admin only, or self)
 - `PUT /api/employees/:id`: Update employee details. (Protected, role-dependent restrictions)

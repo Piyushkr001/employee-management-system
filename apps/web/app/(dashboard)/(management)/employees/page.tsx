@@ -40,16 +40,46 @@ export default async function EmployeesPage({
   };
 
   const validQuery: Partial<EmployeeListQuery> = {};
-  for (const [key, value] of Object.entries(rawQuery)) {
-    if (value !== undefined) {
-      const fieldSchema = (employeeListQuerySchema.shape as Record<string, any>)[key];
-      if (fieldSchema) {
-        const result = fieldSchema.safeParse(value);
-        if (result.success) {
-          (validQuery as any)[key] = result.data;
-        }
-      }
-    }
+  
+  if (rawQuery.page !== undefined) {
+    const res = employeeListQuerySchema.shape.page.safeParse(rawQuery.page);
+    if (res.success) validQuery.page = res.data;
+  }
+  if (rawQuery.limit !== undefined) {
+    const res = employeeListQuerySchema.shape.limit.safeParse(rawQuery.limit);
+    if (res.success) validQuery.limit = res.data;
+  }
+  if (rawQuery.search !== undefined) {
+    const res = employeeListQuerySchema.shape.search.safeParse(rawQuery.search);
+    if (res.success) validQuery.search = res.data;
+  }
+  if (rawQuery.department !== undefined) {
+    const res = employeeListQuerySchema.shape.department.safeParse(rawQuery.department);
+    if (res.success) validQuery.department = res.data;
+  }
+  if (rawQuery.designation !== undefined) {
+    const res = employeeListQuerySchema.shape.designation.safeParse(rawQuery.designation);
+    if (res.success) validQuery.designation = res.data;
+  }
+  if (rawQuery.status !== undefined) {
+    const res = employeeListQuerySchema.shape.status.safeParse(rawQuery.status);
+    if (res.success) validQuery.status = res.data;
+  }
+  if (rawQuery.role !== undefined) {
+    const res = employeeListQuerySchema.shape.role.safeParse(rawQuery.role);
+    if (res.success) validQuery.role = res.data;
+  }
+  if (rawQuery.managerId !== undefined) {
+    const res = employeeListQuerySchema.shape.managerId.safeParse(rawQuery.managerId);
+    if (res.success) validQuery.managerId = res.data;
+  }
+  if (rawQuery.sortBy !== undefined) {
+    const res = employeeListQuerySchema.shape.sortBy.safeParse(rawQuery.sortBy);
+    if (res.success) validQuery.sortBy = res.data;
+  }
+  if (rawQuery.sortOrder !== undefined) {
+    const res = employeeListQuerySchema.shape.sortOrder.safeParse(rawQuery.sortOrder);
+    if (res.success) validQuery.sortOrder = res.data;
   }
 
   const query = employeeListQuerySchema.parse(validQuery);

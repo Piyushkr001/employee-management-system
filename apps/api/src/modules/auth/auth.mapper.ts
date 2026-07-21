@@ -1,10 +1,24 @@
-import type { AuthenticatedUserDto } from "@empnexa/shared";
-import type { employees } from "../../db/schema";
+import type { AuthenticatedUserDto, EmployeeStatus, UserRole } from "@empnexa/shared";
 
-type EmployeeRecord = typeof employees.$inferSelect;
+export type EmployeeAuthProfileRecord = {
+  id: string;
+  employeeCode: string;
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  designation: string;
+  joiningDate: string;
+  status: EmployeeStatus;
+  role: UserRole;
+  managerId: string | null;
+  profileImageUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export function toAuthenticatedUserDto(
-  employee: EmployeeRecord,
+  employee: EmployeeAuthProfileRecord,
 ): AuthenticatedUserDto {
   return {
     id: employee.id,
@@ -15,8 +29,8 @@ export function toAuthenticatedUserDto(
     department: employee.department,
     designation: employee.designation,
     joiningDate: employee.joiningDate,
-    status: employee.status as any, // Mapped to correct literal via schema types if needed, but safe
-    role: employee.role as any,
+    status: employee.status,
+    role: employee.role,
     managerId: employee.managerId,
     profileImageUrl: employee.profileImageUrl,
     createdAt: employee.createdAt.toISOString(),
