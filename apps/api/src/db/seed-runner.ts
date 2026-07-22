@@ -2,17 +2,10 @@ import { db, client } from "./index";
 import { employees } from "./schema/employees";
 import { hashPassword } from "@/utils/password";
 
-import { assertSafeSeedEnvironment } from "./seed-safety";
 import { DEMO_ACCOUNTS } from "@empnexa/shared";
 
-async function seed() {
+export async function runSeed() {
   console.log("🌱 Starting database seeding...");
-
-  assertSafeSeedEnvironment({
-    nodeEnv: process.env.NODE_ENV,
-    allowDemoSeed: process.env.ALLOW_DEMO_SEED,
-    databaseUrl: process.env.DATABASE_URL,
-  });
 
   try {
     const adminPassword = await hashPassword(DEMO_ACCOUNTS.SUPER_ADMIN.password);
@@ -143,5 +136,3 @@ async function seed() {
     await client.end();
   }
 }
-
-seed();

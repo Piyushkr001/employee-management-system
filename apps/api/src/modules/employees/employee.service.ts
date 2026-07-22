@@ -15,13 +15,17 @@ export class EmployeeService {
     const includeSalary = actorRole === "super_admin" || actorRole === "hr_manager";
     
     return {
-      employees: result.employees.map((emp) => toEmployeeDto(emp, includeSalary)),
+      employees: result.employees.map((emp) => toEmployeeDto(emp, { includeSalary })),
       pagination: result.pagination
     };
   }
 
   async getManagerOptions(query: { search?: string; excludeEmployeeId?: string; limit?: number }) {
     return await this.repository.getManagerOptions(query);
+  }
+
+  async getFilterOptions() {
+    return await this.repository.getFilterOptions();
   }
 
   async getManagerOptionById(id: string) {
@@ -39,7 +43,7 @@ export class EmployeeService {
     }
 
     const includeSalary = actorRole === "super_admin" || actorRole === "hr_manager";
-    return toEmployeeDto(employee, includeSalary);
+    return toEmployeeDto(employee, { includeSalary });
   }
 
   async create(input: CreateEmployeeInput, actor: { id: string; role: UserRole }) {
@@ -59,7 +63,7 @@ export class EmployeeService {
 
       const newEmployee = await this.repository.createEmployeeTransactionSafe(newEmployeeData, actor);
 
-      return toEmployeeDto(newEmployee, true);
+      return toEmployeeDto(newEmployee, { includeSalary: true });
   }
 
   async update(id: string, input: UpdateEmployeeInput, actor: { id: string; role: UserRole }) {
@@ -70,10 +74,10 @@ export class EmployeeService {
       delete (updateData as any).salary;
     }
 
-      const updatedEmployee = await this.repository.updateEmployeeTransactionSafe(id, updateData, actor);
+      const result = await this.repository.updateEmployeeTransactionSafe(id, updateData, actor);
       
-      const includeSalary = actor.role === "super_admin" || actor.role === "hr_manager";
-      return toEmployeeDto(updatedEmployee, includeSalary);
+      const includeSalary = result.effectiveActorRole === "super_admin" || result.effectiveActorRole === "hr_manager";
+      return toEmployeeDto(result.employee, { includeSalary });
   }
 
   async softDelete(id: string, actor: { id: string; role: UserRole }) {

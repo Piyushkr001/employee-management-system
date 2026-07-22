@@ -308,4 +308,53 @@ describe("HTTP to PostgreSQL Integration", () => {
     // Exactly one active, non-deleted Super Admin remains
     expect(activeAdmins).toHaveLength(1);
   });
+
+  test("Salary leak race: Demoted Super Admin self-update", async () => {
+    // Initial state: Request token says Super Admin, but DB says Employee
+    const admin = await createTestEmployee({ role: "employee" });
+    const token = signAccessToken({ sub: admin.id, role: "super_admin", employeeCode: admin.employeeCode });
+
+    const response = await setHeaders(request(app).put(`/api/employees/${admin.id}`), token)
+      .send({
+        phone: "+1111111111"
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.phone).toBe("+1111111111");
+    // Salary must be absent because the locked effective role is employee
+    expect(response.body.data.salary).toBeUndefined();
+  });
+
+  test("Salary leak race: Demoted HR Manager self-update", async () => {
+    const hr = await createTestEmployee({ role: "employee" });
+    const token = signAccessToken({ sub: hr.id, role: "hr_manager", employeeCode: hr.employeeCode });
+
+    const response = await setHeaders(request(app).put(`/api/employees/${hr.id}`), token)
+      .send({
+        phone: "+2222222222"
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.phone).toBe("+2222222222");
+    // Salary must be absent
+    expect(response.body.data.salary).toBeUndefined();
+  });
+
+  test("Salary leak race: Privileged target update", async () => {
+    // Initial state: Request token says Super Admin, but DB says Employee
+    const demotedAdmin = await createTestEmployee({ role: "employee" });
+    const token = signAccessToken({ sub: demotedAdmin.id, role: "super_admin", employeeCode: demotedAdmin.employeeCode });
+
+    // Target is a different employee
+    const target = await createTestEmployee();
+
+    const response = await setHeaders(request(app).put(`/api/employees/${target.id}`), token)
+      .send({
+        phone: "+3333333333"
+      });
+
+    // Since effective role is employee, updating a different employee is FORBIDDEN
+    expect(response.status).toBe(403);
+    expect(response.body.data).toBeUndefined();
+  });
 });

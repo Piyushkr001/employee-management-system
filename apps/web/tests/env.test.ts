@@ -15,7 +15,7 @@ describe("Environment & Security Validation", () => {
 
   describe("API_PROXY_TARGET", () => {
     test("should throw in production if API_PROXY_TARGET is missing", async () => {
-      process.env.NODE_ENV = "production";
+      Object.defineProperty(process.env, "NODE_ENV", { value: "production", writable: true });
       delete process.env.API_PROXY_TARGET;
       
       const { default: nextConfig } = await import("../next.config");
@@ -28,14 +28,14 @@ describe("Environment & Security Validation", () => {
 
   describe("API_INTERNAL_URL", () => {
     test("should throw in production if API_INTERNAL_URL is missing", () => {
-      process.env.NODE_ENV = "production";
+      Object.defineProperty(process.env, "NODE_ENV", { value: "production", writable: true });
       delete process.env.API_INTERNAL_URL;
       
       expect(() => getInternalApiUrl()).toThrow("API_INTERNAL_URL is required in production");
     });
 
     test("should return fallback in development if missing", () => {
-      process.env.NODE_ENV = "development";
+      Object.defineProperty(process.env, "NODE_ENV", { value: "development", writable: true });
       delete process.env.API_INTERNAL_URL;
       // We will change the fallback to port 5001 later, but for now test what the function does
       expect(getInternalApiUrl()).toBe("http://localhost:5001/api");

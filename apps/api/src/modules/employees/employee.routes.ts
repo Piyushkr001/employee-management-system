@@ -21,6 +21,12 @@ router.get(
   asyncHandler(controller.list.bind(controller))
 );
 
+router.get(
+  "/filter-options",
+  authorize(USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER),
+  asyncHandler(controller.filterOptions.bind(controller))
+);
+
 router.post(
   "/",
   authorize(USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER),

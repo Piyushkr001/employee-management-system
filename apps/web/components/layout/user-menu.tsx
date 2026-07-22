@@ -2,6 +2,7 @@
 
 import { LogOut, User } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -20,13 +21,31 @@ import { authApi } from "@/features/auth/auth.api"
 export function UserMenu({ user }: { user: AuthenticatedUserDto }) {
   const router = useRouter()
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
   const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
     try {
-      await authApi.logout()
-      router.push("/login")
-      router.refresh()
+      await Promise.allSettled([
+        fetch("/backend/auth/logout", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-EmpNexa-Request": "web",
+          },
+        }),
+        fetch("/api/auth/clear-session", {
+          method: "POST",
+          credentials: "include",
+        }),
+      ]);
     } catch (e) {
       console.error(e)
+    } finally {
+      router.replace("/login")
+      router.refresh()
     }
   }
 
@@ -55,9 +74,9 @@ export function UserMenu({ user }: { user: AuthenticatedUserDto }) {
           <span>Profile</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
+        <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
           <LogOut className="mr-2 size-4" />
-          <span>Log out</span>
+          <span>{isLoggingOut ? "Logging out..." : "Log out"}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

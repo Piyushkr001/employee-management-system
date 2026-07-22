@@ -47,6 +47,21 @@ export class EmployeeController {
     }
   };
 
+  filterOptions = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const actor = req.user!;
+      if (!canListEmployees(actor)) {
+        return next(new ApiError(403, "You do not have permission to view employees", "FORBIDDEN"));
+      }
+
+      const options = await this.service.getFilterOptions();
+
+      sendResponse(res, 200, "Filter options retrieved successfully", options);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getManagerOptionById = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const actor = req.user!;

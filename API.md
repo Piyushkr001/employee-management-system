@@ -53,6 +53,7 @@ Common error codes returned in the `error.code` payload:
 - `GET /api/employees`: List employees with pagination, search, and filtering. (Protected, HR Manager & Super Admin only)
 - `GET /api/employees/manager-options`: Searches active, non-deleted manager candidates. (Note: does *not* recursively remove all circular-reporting candidates—circular assignments are fully rejected during the update transaction). (Protected, HR Manager & Super Admin only)
 - `GET /api/employees/manager-options/:id`: Resolves one non-deleted Employee label by ID. May be used to restore a selected filter label. (Protected, HR Manager & Super Admin only)
+- `GET /api/employees/filter-options`: Retrieves unique arrays of all assigned `department` and `designation` strings for building searchable dropdowns. (Protected, HR Manager & Super Admin only)
 - `POST /api/employees`: Create a new employee. (Requires `super_admin` or `hr_manager`)
 - `GET /api/employees/:id`: Get employee details by ID. (Protected, HR Manager & Super Admin only, or self)
 - `PUT /api/employees/:id`: Update employee details. (Protected, role-dependent restrictions)
@@ -65,5 +66,6 @@ Common error codes returned in the `error.code` payload:
 - Cookie name is shared between frontend and backend. Backend uses `COOKIE_NAME`, frontend uses `AUTH_COOKIE_NAME` environment variable (defaults to `empnexa_token`). The values must match identically.
 - `employeeCode` is strictly immutable after creation.
 - Hierarchy operations (assigning managers, soft deleting) are protected by a Postgres advisory transaction lock (`EMPLOYEE_HIERARCHY_LOCK_KEY`) to prevent concurrent circular reporting and race conditions.
-- Super Admin demotion/deactivation and general updates/deletions are strictly authorized via a locked-actor architecture. The system uses a `FOR UPDATE` row-level lock on the actor performing the action to validate the absolute latest actor state (e.g. active, not demoted).
+- Super Admin demotion/deactivation and general updates/deletions are strictly authorized via a locked-actor architecture. The system uses a `FOR UPDATE` row-level lock on the actor performing the action to validate the absolute latest actor state (e.g. active, not demoted). The actor lock is strictly acquired *before* the target row lock (by ordering IDs) to guarantee deadlock prevention.
 - `API_INTERNAL_URL` is mandatory in production for Server Components to resolve backend absolute paths. Browser components use `NEXT_PUBLIC_API_URL=/backend`.
+- Server component API calls explicitly throw Next.js boundaries for 500, 502, 503, and 504 errors rather than silently redirecting to `/login` or rendering blank pages.

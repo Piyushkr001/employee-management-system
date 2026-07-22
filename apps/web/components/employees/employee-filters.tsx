@@ -3,15 +3,16 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { cn } from "@/lib/utils";
 import { X, SlidersHorizontal } from "lucide-react";
 import { EMPLOYEE_STATUSES, EMPLOYEE_SORT_FIELDS, SORT_ORDERS } from "@empnexa/shared";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ManagerSelect } from "./manager-select";
-import { useState, useEffect } from "react";
+import { FilterCombobox } from "./filter-combobox";
 import { employeeApi } from "@/features/employees/employee.api";
 import { ManagerOptionDto } from "@empnexa/shared";
+import { useState, useEffect } from "react";
+import { ManagerSelect } from "./manager-select";
 
 export function EmployeeFilters() {
   const router = useRouter();
@@ -61,17 +62,17 @@ export function EmployeeFilters() {
     return () => { isMounted = false; };
   }, [managerId]);
 
-  const applyTextFilters = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (department) params.set("department", department);
-    else params.delete("department");
-    
-    if (designation) params.set("designation", designation);
-    else params.delete("designation");
+  const [filterOptions, setFilterOptions] = useState<{ departments: string[]; designations: string[] }>({ departments: [], designations: [] });
 
-    params.set("page", "1");
-    router.replace(`?${params.toString()}`);
-  };
+  useEffect(() => {
+    let isMounted = true;
+    employeeApi.getFilterOptions().then(res => {
+      if (isMounted && res.data) {
+        setFilterOptions(res.data as any);
+      }
+    }).catch(console.error);
+    return () => { isMounted = false; };
+  }, []);
 
   return (
     <div className="flex items-center gap-2">
@@ -84,23 +85,29 @@ export function EmployeeFilters() {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Department</label>
-              <Input 
-                placeholder="e.g. Engineering" 
+              <FilterCombobox 
                 value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                onBlur={applyTextFilters}
-                onKeyDown={(e) => e.key === 'Enter' && applyTextFilters()}
+                onChange={(val) => {
+                  setDepartment(val);
+                  handleFilterChange("department", val);
+                }}
+                options={filterOptions.departments}
+                placeholder="Department"
+                emptyText="No department found"
               />
             </div>
             
             <div className="space-y-2">
               <label className="text-sm font-medium">Designation</label>
-              <Input 
-                placeholder="e.g. Developer" 
+              <FilterCombobox 
                 value={designation}
-                onChange={(e) => setDesignation(e.target.value)}
-                onBlur={applyTextFilters}
-                onKeyDown={(e) => e.key === 'Enter' && applyTextFilters()}
+                onChange={(val) => {
+                  setDesignation(val);
+                  handleFilterChange("designation", val);
+                }}
+                options={filterOptions.designations}
+                placeholder="Designation"
+                emptyText="No designation found"
               />
             </div>
 

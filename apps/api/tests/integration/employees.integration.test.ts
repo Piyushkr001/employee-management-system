@@ -125,6 +125,20 @@ describe("Employee API Integration Tests", () => {
     expect(res.body.data.managers[0].name).toBe("Manager 1");
   });
 
+  it("should retrieve filter options via GET /api/employees/filter-options", async () => {
+    spyOn(EmployeeRepository.prototype, "getFilterOptions").mockImplementation(async () => {
+      return { departments: ["Engineering", "HR"], designations: ["Developer", "Manager"] };
+    });
+    
+    const res = await request(app)
+      .get("/api/employees/filter-options")
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.departments).toEqual(["Engineering", "HR"]);
+    expect(res.body.data.designations).toEqual(["Developer", "Manager"]);
+  });
+
   it("should get employee by id via GET /api/employees/:id", async () => {
     const res = await request(app)
       .get(`/api/employees/${EMPLOYEE_ID}`)

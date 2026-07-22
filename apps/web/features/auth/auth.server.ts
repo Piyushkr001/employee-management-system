@@ -29,19 +29,20 @@ export const getCurrentUserServer = async (): Promise<AuthenticatedUserDto | nul
   if (res.status === 401) {
     return null;
   }
-  const data: ApiResponse<{ user: AuthenticatedUserDto }> = await res.json();
-  
+
   if (res.status === 403) {
-    if (data.error?.code === "ACCOUNT_INACTIVE") {
+    const payload = await res.json();
+    if (payload?.error?.code === "ACCOUNT_INACTIVE") {
       redirect("/login?reason=inactive");
     }
     redirect("/unauthorized");
   }
 
   if (!res.ok) {
-    return null;
+    throw new Error("Authentication service is unavailable");
   }
 
+  const data: ApiResponse<{ user: AuthenticatedUserDto }> = await res.json();
   return data.data?.user || null;
 }
 

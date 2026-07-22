@@ -44,7 +44,7 @@ describe("Hierarchy Constraints", () => {
     const empC = await createTestEmployee({ managerId: empB.id });
 
     // C reports to A directly
-    const updated = await repo.updateEmployeeTransactionSafe(empC.id, { managerId: empA.id }, actor);
-    expect(updated.managerId).toBe(empA.id);
+    const res = await repo.updateEmployeeTransactionSafe(empC.id, { managerId: empA.id }, actor);
+    expect(res.employee.managerId).toBe(empA.id);
   });
 });

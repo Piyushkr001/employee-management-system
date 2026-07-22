@@ -4,7 +4,7 @@ import { verifyAccessToken } from "../utils/jwt";
 import { env } from "../config/env";
 import { AuthRepository } from "../modules/auth/auth.repository";
 import { AuthenticatedUserDto, UserRole, EmployeeStatus } from "@empnexa/shared";
-import { toAuthenticatedUserDto } from "../modules/auth/auth.mapper";
+import { toAuthenticatedUserDto, EmployeeAuthProfileRecord } from "../modules/auth/auth.mapper";
 
 declare global {
   namespace Express {
@@ -40,7 +40,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       return next(new ApiError(403, "Employee account is inactive", "ACCOUNT_INACTIVE"));
     }
 
-    req.user = toAuthenticatedUserDto(user as any);
+    req.user = toAuthenticatedUserDto(user as EmployeeAuthProfileRecord);
 
     next();
   } catch (error) {

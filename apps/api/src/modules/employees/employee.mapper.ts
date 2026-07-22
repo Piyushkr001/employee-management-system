@@ -1,31 +1,42 @@
 import { EmployeeMutationRecord, EmployeeDetailRecord, EmployeeListRecord } from "./employee.repository";
 import { EmployeeDto } from "@empnexa/shared";
 
+export type EmployeeMapperRecord = EmployeeMutationRecord | EmployeeDetailRecord | EmployeeListRecord;
+
+export type EmployeeMapperOptions = {
+  includeSalary?: boolean;
+};
+
 export function toEmployeeDto(
-  employee: EmployeeMutationRecord | EmployeeDetailRecord | EmployeeListRecord, 
-  includeSalary: boolean = false
+  employee: EmployeeMapperRecord, 
+  options: EmployeeMapperOptions = {}
 ): EmployeeDto {
   const emp = employee as Partial<EmployeeDetailRecord & EmployeeMutationRecord>;
-  const { passwordHash, deletedAt, salaryInPaise, ...rest } = emp;
-
-  const dto: any = { ...rest };
   
-  if (includeSalary && salaryInPaise !== undefined) {
-    dto.salary = salaryInPaise / 100;
-  }
+  const dto: EmployeeDto = {
+    id: emp.id!,
+    employeeCode: emp.employeeCode!,
+    name: emp.name!,
+    email: emp.email!,
+    phone: emp.phone!,
+    department: emp.department!,
+    designation: emp.designation!,
+    joiningDate: String(emp.joiningDate),
+    status: emp.status!,
+    role: emp.role!,
+    managerId: emp.managerId ?? null,
+    profileImageUrl: emp.profileImageUrl ?? null,
+    createdAt: emp.createdAt instanceof Date ? emp.createdAt.toISOString() : String(emp.createdAt),
+    updatedAt: emp.updatedAt instanceof Date ? emp.updatedAt.toISOString() : String(emp.updatedAt),
+  };
 
-  // Format dates appropriately
-  if (dto.joiningDate instanceof Date) {
-    dto.joiningDate = (dto.joiningDate as Date).toISOString().split("T")[0];
+  if (emp.manager) {
+    dto.manager = emp.manager;
   }
   
-  if (dto.createdAt instanceof Date) {
-    dto.createdAt = (dto.createdAt as Date).toISOString();
-  }
-  
-  if (dto.updatedAt instanceof Date) {
-    dto.updatedAt = (dto.updatedAt as Date).toISOString();
+  if (options.includeSalary && emp.salaryInPaise !== undefined) {
+    dto.salary = emp.salaryInPaise / 100;
   }
 
-  return dto as EmployeeDto;
+  return dto;
 }

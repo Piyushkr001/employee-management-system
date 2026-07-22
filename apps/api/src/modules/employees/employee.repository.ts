@@ -56,6 +56,11 @@ export type EmployeeDetailRecord = EmployeeListRecord & {
 
 export type EmployeeMutationRecord = typeof employees.$inferSelect;
 
+export type UpdateEmployeeTransactionResult = {
+  employee: EmployeeMutationRecord;
+  effectiveActorRole: UserRole;
+};
+
 export type ManagerOptionRecord = {
   id: string;
   employeeCode: string;
@@ -225,7 +230,7 @@ export class EmployeeRepository {
     });
   }
 
-  async updateEmployeeTransactionSafe(id: string, data: Partial<NewEmployee>, actor?: { id: string; role: UserRole }): Promise<EmployeeMutationRecord> {
+  async updateEmployeeTransactionSafe(id: string, data: Partial<NewEmployee>, actor?: { id: string; role: UserRole }): Promise<UpdateEmployeeTransactionResult> {
     return await db.transaction(async (tx) => {
       if (data.role !== undefined || data.status !== undefined) {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(${SUPER_ADMIN_INVARIANT_LOCK_KEY})`);
@@ -373,7 +378,11 @@ export class EmployeeRepository {
           throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
         }
 
-        return updatedEmployee;
+        const effectiveActorRole = actor 
+          ? (lockedEmployees.find(e => e.id === actor.id)?.role ?? actor.role)
+          : "employee";
+
+        return { employee: updatedEmployee, effectiveActorRole };
       } catch (error: any) {
         if (error instanceof ApiError) throw error;
         const mappedError = mapPostgreSqlError(error);
@@ -546,6 +555,20 @@ export class EmployeeRepository {
         hasPreviousPage: normalizedPage > 1,
       }
     };
+  }
+
+  async getFilterOptions(): Promise<{ departments: string[]; designations: string[] }> {
+    const results = await db.selectDistinct({
+      department: employees.department,
+      designation: employees.designation,
+    })
+    .from(employees)
+    .where(isNull(employees.deletedAt));
+
+    const departments = Array.from(new Set(results.map(r => r.department))).sort();
+    const designations = Array.from(new Set(results.map(r => r.designation))).sort();
+
+    return { departments, designations };
   }
 
   async getManagerOptions(query: { search?: string; excludeEmployeeId?: string; limit?: number }) {

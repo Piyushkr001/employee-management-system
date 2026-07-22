@@ -16,13 +16,15 @@ EmpNexa is a full-stack Employee Management System built with a modern stack pri
 - Transaction-safe architecture protecting against concurrent updates and soft deletions
 - Explicit backend field rejection for forbidden modifications
 - Standardized API responses and error handling
+- **Scope Note**: Direct-reportees APIs, Dashboard analytics, Organization hierarchy visuals, and dedicated manager-assignment APIs are intentionally omitted from this stabilization phase.
 
 ## Getting Started
 1. Install Bun version `1.3.14`
 2. Clone the repository and run `bun install`
 3. Setup PostgreSQL database and update `.env` in `apps/api`
 4. Run `bun db:migrate` in `apps/api` to apply schema changes
-5. Run `bun db:seed` in `apps/api` to create default demo accounts and the full ten-person seed hierarchy (running this command again will restore any soft-deleted demo accounts)
+5. Ensure `ALLOW_DEMO_SEED=true` is set in `apps/api/.env`.
+6. Run `bun db:seed` in `apps/api` to create default demo accounts and the full ten-person seed hierarchy (running this command again will restore any soft-deleted demo accounts).
    - Super Admin: `admin@empnexa.com` / `Admin@123`
    - HR Manager: `hr@empnexa.com` / `HrManager@123`
    - Employee: `frontend@empnexa.com` / `Welcome@123`

@@ -4,6 +4,17 @@ import { AUTH_COOKIE_NAME } from "@/lib/auth-config";
 
 import { getInternalApiUrl } from "@/lib/api-utils";
 
+export class EmployeeApiServerError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly payload: ApiResponse<unknown>
+  ) {
+    super(message);
+    this.name = "EmployeeApiServerError";
+  }
+}
+
 export async function fetchEmployeeApiServer<T>(
   endpoint: string,
   init: RequestInit = {},
@@ -49,10 +60,11 @@ export async function fetchEmployeeApiServer<T>(
   }
 
   if (!response.ok) {
-    // We attach the full payload so callers can check `error.code` or `error.fieldErrors` if needed
-    const err = new Error(payload.message || "Employee API request failed");
-    (err as any).payload = payload;
-    throw err;
+    throw new EmployeeApiServerError(
+      payload.message || "Employee API request failed",
+      response.status,
+      payload
+    );
   }
 
   return payload;

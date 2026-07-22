@@ -42,7 +42,7 @@ describe("Super Admin Protection", () => {
     const actor = { id: activeAdmin.id, role: activeAdmin.role };
 
     const updated = await repo.updateEmployeeTransactionSafe(admin.id, { role: "employee" }, actor);
-    expect(updated.role).toBe("employee");
+    expect(updated.employee.role).toBe("employee");
   });
 
   test("should concurrently protect the last active super admin from cross-account demotion", async () => {

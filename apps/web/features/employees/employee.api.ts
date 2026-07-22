@@ -29,6 +29,13 @@ export const employeeApi = {
     });
   },
 
+  getFilterOptions: async (signal?: AbortSignal) => {
+    return fetchApi<{ departments: string[]; designations: string[] }>(
+      "/employees/filter-options",
+      { method: "GET", signal }
+    );
+  },
+
   getManagerOptions: async (excludeEmployeeId?: string, search?: string, signal?: AbortSignal) => {
     const searchParams = new URLSearchParams();
     if (excludeEmployeeId) {

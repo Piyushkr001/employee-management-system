@@ -13,3 +13,6 @@ Ensure your `apps/web/.env` is properly configured:
 ## Deployment
 
 In production, ensure `API_INTERNAL_URL` is configured correctly, otherwise the build and server startup will intentionally fail to protect against broken Server Component renders.
+
+## Error Handling
+Server components utilizing `fetchEmployeeApiServer` explicitly throw `EmployeeApiServerError` for non-2xx responses. For 500, 502, 503, and 504 errors, this allows Next.js error boundaries (`error.tsx`) to catch and render the error page properly, rather than silently redirecting to `/login` or rendering blank layouts.

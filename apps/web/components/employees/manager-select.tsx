@@ -51,8 +51,8 @@ export function ManagerSelect({ value, onChange, excludeEmployeeId, disabled, cu
         if (currentRequestId === requestIdRef.current) {
           setManagers(res.data?.managers || []);
         }
-      } catch (err: any) {
-        if (err.name === 'AbortError') return;
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         if (currentRequestId === requestIdRef.current) {
           setError("Failed to load managers");
         }
