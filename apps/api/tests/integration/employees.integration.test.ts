@@ -10,6 +10,25 @@ import { AuthRepository } from "../../src/modules/auth/auth.repository";
 const SUPER_ADMIN_ID = "11111111-1111-4111-8111-111111111111";
 const EMPLOYEE_ID = "33333333-3333-4333-8333-333333333333";
 
+const mockEmployeeMutationRecord = {
+  id: EMPLOYEE_ID,
+  employeeCode: "EMP001",
+  name: "Updated Employee",
+  email: "employee@empnexa.com",
+  phone: "9876543210",
+  department: "Engineering",
+  designation: "Developer",
+  salaryInPaise: 5_000_000,
+  joiningDate: "2026-01-01",
+  status: "active" as const,
+  role: "employee" as const,
+  managerId: null,
+  profileImageUrl: null,
+  deletedAt: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
 describe("Employee API Integration Tests", () => {
   beforeEach(() => {
     spyOn(AuthRepository.prototype, "findFullEmployeeById").mockImplementation(async (id) => {
@@ -171,7 +190,10 @@ describe("Employee API Integration Tests", () => {
 
   it("should fail updating employee code or salary if unauthorized (non HR)", async () => {
     spyOn(EmployeeRepository.prototype, "updateEmployeeTransactionSafe").mockImplementation(async (id, data) => {
-      return { id, ...data } as any;
+      return { 
+        employee: { ...mockEmployeeMutationRecord, id, ...data }, 
+        effectiveActorRole: "employee" 
+      } as any;
     });
 
     const empToken = signAccessToken({ sub: EMPLOYEE_ID, role: "employee", employeeCode: "E001" });
@@ -189,7 +211,10 @@ describe("Employee API Integration Tests", () => {
 
   it("should successfully update via PUT /api/employees/:id", async () => {
     spyOn(EmployeeRepository.prototype, "updateEmployeeTransactionSafe").mockImplementation(async (id, data) => {
-      return { id, ...data } as any;
+      return { 
+        employee: { ...mockEmployeeMutationRecord, id, ...data }, 
+        effectiveActorRole: "super_admin" 
+      } as any;
     });
 
     const res = await request(app)

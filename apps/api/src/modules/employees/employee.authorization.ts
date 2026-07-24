@@ -12,6 +12,11 @@ type TargetEmployee = {
   deletedAt: Date | null;
 };
 
+export type EmployeeAuthorizationUpdate = {
+  role?: UserRole;
+  [key: string]: any;
+};
+
 export function canListEmployees(actor: Actor): boolean {
   return actor.role === "super_admin" || actor.role === "hr_manager";
 }
@@ -38,7 +43,7 @@ export function assertActorCanCreateEmployee(actor: Actor, input: CreateEmployee
   throw new ApiError(403, "You do not have permission to create employees", "FORBIDDEN");
 }
 
-export function assertActorCanUpdateEmployee(actor: Actor, target: TargetEmployee, input: UpdateEmployeeInput): void {
+export function assertActorCanUpdateEmployee(actor: Actor, target: TargetEmployee, input: EmployeeAuthorizationUpdate): void {
   if (actor.role === "super_admin") {
     return;
   }
@@ -68,7 +73,7 @@ export function assertActorCanUpdateEmployee(actor: Actor, target: TargetEmploye
   throw new ApiError(403, "Cannot modify another employee", "FORBIDDEN");
 }
 
-export function filterAllowedUpdateFields(actor: Actor, target: TargetEmployee, input: UpdateEmployeeInput): UpdateEmployeeInput {
+export function filterAllowedUpdateFields(actor: Actor, target: TargetEmployee, input: EmployeeAuthorizationUpdate): EmployeeAuthorizationUpdate {
   assertActorCanUpdateEmployee(actor, target, input);
   return input;
 }

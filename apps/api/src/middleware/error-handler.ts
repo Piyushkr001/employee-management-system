@@ -4,7 +4,7 @@ import { sendResponse } from "../utils/response";
 import { ZodError } from "zod";
 
 export const errorHandler = (
-  err: any,
+  err: unknown,
   req: Request,
   res: Response,
   next: NextFunction
@@ -19,14 +19,18 @@ export const errorHandler = (
     message = err.message;
     code = err.code;
     fieldErrors = err.fieldErrors;
-  } else if (err instanceof ZodError || err.name === "ZodError") {
+  } else if (err instanceof SyntaxError && typeof err === "object" && err !== null && "body" in err) {
+    statusCode = 400;
+    message = "Malformed JSON body";
+    code = "INVALID_JSON";
+  } else if (typeof err === "object" && err !== null && (err as Error).name === "ZodError") {
     statusCode = 422;
     message = "Validation Error";
     code = "VALIDATION_ERROR";
     if (err instanceof ZodError) {
       fieldErrors = err.flatten().fieldErrors as Record<string, string[]>;
     }
-  } else if (err.name === "UnauthorizedError") {
+  } else if (typeof err === "object" && err !== null && (err as Error).name === "UnauthorizedError") {
     statusCode = 401;
     message = "Unauthorized";
     code = "UNAUTHORIZED";
@@ -34,7 +38,9 @@ export const errorHandler = (
 
   // Logging Policy
   if (statusCode === 500) {
-    console.error(`[Error] 500 - ${err.message}\n`, err.stack);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const errStack = err instanceof Error ? err.stack : undefined;
+    console.error(`[Error] 500 - ${errMsg}\n`, errStack);
   } else if (statusCode === 401 || statusCode === 403) {
     console.warn(`[Security] ${statusCode} - ${message} [Code: ${code}]`);
   } else if (statusCode !== 404 && statusCode !== 422) {

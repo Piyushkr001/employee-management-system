@@ -22,9 +22,8 @@ router.get("/", async (req, res) => {
     res.status(503).json({
       success: false,
       message: "EmpNexa API is degraded",
-      data: {
-        service: "empnexa-api",
-        database: "disconnected",
+      error: {
+        code: "DATABASE_UNAVAILABLE"
       }
     });
   }

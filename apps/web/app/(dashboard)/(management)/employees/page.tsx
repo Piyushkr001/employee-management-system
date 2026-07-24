@@ -87,14 +87,20 @@ export default async function EmployeesPage({
   const res = await getEmployeesServer(query);
   const { employees, pagination } = res.data || { employees: [], pagination: { page: 1, total: 0, totalPages: 1 } };
 
-  if (pagination.total > 0 && query.page > pagination.totalPages) {
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(validQuery)) {
-      if (value !== undefined && value !== "") {
-        params.set(key, String(value));
-      }
+  // Canonicalize invalid/out-of-bounds page or dropped invalid parameters
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== "") {
+      params.set(key, String(value));
     }
-    params.set("page", pagination.totalPages.toString());
+  }
+  params.set("page", pagination.page.toString());
+
+  const currentQueryString = new URLSearchParams(
+    Object.entries(rawQuery).filter(([_, v]) => v !== undefined) as string[][]
+  ).toString();
+
+  if (params.toString() !== currentQueryString) {
     redirect(`/employees?${params.toString()}`);
   }
 

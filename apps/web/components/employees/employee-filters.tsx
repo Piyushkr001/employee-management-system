@@ -75,7 +75,7 @@ export function EmployeeFilters() {
   }, []);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <Popover>
         <PopoverTrigger className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-10 border-dashed")}>
           <SlidersHorizontal className="mr-2 h-4 w-4" />

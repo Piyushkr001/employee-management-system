@@ -256,7 +256,17 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checks": {
+        "employees_salary_non_negative": {
+          "name": "employees_salary_non_negative",
+          "value": "\"salary_in_paise\" >= 0"
+        },
+        "employees_manager_not_self": {
+          "name": "employees_manager_not_self",
+          "value": "\"manager_id\" IS NULL OR \"manager_id\" <> \"id\""
+        }
+      }
     }
   },
   "enums": {

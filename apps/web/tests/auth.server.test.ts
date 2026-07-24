@@ -46,7 +46,7 @@ describe("getCurrentUserServer", () => {
       json: async () => ({ error: { code: "ACCOUNT_INACTIVE" } })
     } as any);
 
-    expect(getCurrentUserServer()).rejects.toThrow("REDIRECT_TO_/login?reason=inactive");
+    await expect(getCurrentUserServer()).rejects.toThrow("REDIRECT_TO_/login?reason=inactive");
   });
 
   test("redirects to unauthorized on 403 FORBIDDEN", async () => {
@@ -56,7 +56,7 @@ describe("getCurrentUserServer", () => {
       json: async () => ({ error: { code: "FORBIDDEN" } })
     } as any);
 
-    expect(getCurrentUserServer()).rejects.toThrow("REDIRECT_TO_/unauthorized");
+    await expect(getCurrentUserServer()).rejects.toThrow("REDIRECT_TO_/unauthorized");
   });
 
   test("throws on 500", async () => {
@@ -65,7 +65,7 @@ describe("getCurrentUserServer", () => {
       ok: false,
     } as any);
 
-    expect(getCurrentUserServer()).rejects.toThrow("Authentication service is unavailable");
+    await expect(getCurrentUserServer()).rejects.toThrow("Authentication service is unavailable");
   });
 
   test("throws on 503", async () => {
@@ -74,6 +74,6 @@ describe("getCurrentUserServer", () => {
       ok: false,
     } as any);
 
-    expect(getCurrentUserServer()).rejects.toThrow("Authentication service is unavailable");
+    await expect(getCurrentUserServer()).rejects.toThrow("Authentication service is unavailable");
   });
 });

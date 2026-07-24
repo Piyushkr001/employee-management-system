@@ -221,9 +221,9 @@ export class EmployeeRepository {
       try {
         const [employee] = await tx.insert(employees).values(data).returning();
         return employee;
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof ApiError) throw error;
-        const mappedError = mapPostgreSqlError(error);
+        const mappedError = mapPostgreSqlError(error as Error);
         if (mappedError) throw mappedError;
         throw error;
       }
@@ -267,7 +267,7 @@ export class EmployeeRepository {
         }
 
         // Authorization uses the locked state
-        assertActorCanUpdateEmployee({ id: lockedActor.id, role: lockedActor.role }, targetEmployee, data as unknown as import("@empnexa/shared").UpdateEmployeeInput);
+        assertActorCanUpdateEmployee({ id: lockedActor.id, role: lockedActor.role }, targetEmployee, data);
       } else {
         if (!targetEmployee || targetEmployee.deletedAt !== null) {
           throw new ApiError(404, "Employee not found", "EMPLOYEE_NOT_FOUND");
@@ -379,13 +379,13 @@ export class EmployeeRepository {
         }
 
         const effectiveActorRole = actor 
-          ? (lockedEmployees.find(e => e.id === actor.id)?.role ?? actor.role)
+          ? (actor.id === id ? updatedEmployee.role : (lockedEmployees.find(e => e.id === actor.id)?.role ?? actor.role))
           : "employee";
 
         return { employee: updatedEmployee, effectiveActorRole };
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof ApiError) throw error;
-        const mappedError = mapPostgreSqlError(error);
+        const mappedError = mapPostgreSqlError(error as Error);
         if (mappedError) throw mappedError;
         throw error;
       }

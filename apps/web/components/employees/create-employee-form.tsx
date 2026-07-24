@@ -183,11 +183,12 @@ export function CreateEmployeeForm({ currentUserRole }: CreateEmployeeFormProps)
                 <FormLabel>Salary (₹)</FormLabel>
                 <FormControl>
                   <Input 
-                    type="number" 
-                    placeholder="60000" 
-                    disabled={isLoading || currentUserRole === "employee"} 
                     {...field} 
-                    onChange={e => field.onChange(parseFloat(e.target.value))}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    disabled={isLoading || currentUserRole === "employee"}
+                    onChange={e => field.onChange(e.target.value === "" ? undefined : e.target.valueAsNumber)} 
                   />
                 </FormControl>
                 <FormMessage />

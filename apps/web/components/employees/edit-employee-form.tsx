@@ -170,10 +170,12 @@ export function EditEmployeeForm({ employee, currentUserRole }: EditEmployeeForm
                 <FormControl>
                   <Input 
                     type="number" 
+                    min="0"
+                    step="0.01"
                     placeholder="60000" 
                     disabled={isLoading || currentUserRole === "employee"} 
                     {...field} 
-                    onChange={e => field.onChange(parseFloat(e.target.value))}
+                    onChange={e => field.onChange(e.target.value === "" ? undefined : e.target.valueAsNumber)} 
                   />
                 </FormControl>
                 <FormMessage />

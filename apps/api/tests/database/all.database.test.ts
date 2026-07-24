@@ -20,4 +20,5 @@ describe("Database Integration Tests (Serial)", () => {
   require("./super-admin.cases.ts");
   require("./auth-db.cases.ts");
   require("./http-postgres.cases.ts");
+  require("./filter-options.cases.ts");
 });
